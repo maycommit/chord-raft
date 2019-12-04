@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package chord;
+
+service Chord {
+  rpc FindSuccessorRPC(ID) returns (Node);
+  rpc ClosetPrecedingNodeRPC(ID) returns (Node);
+  rpc GetSuccessorRPC(Any) returns (Node);
+  rpc GetPredecessorRPC(Any) returns (Node);
+  rpc NotifyRPC(Node) returns (Any);
+}
+
+message ID {
+  int64 id = 1;
+}
+
+message Node {
+  int64 id = 1;
+  string address = 2;
+}
+
+message Any {}
