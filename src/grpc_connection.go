@@ -2,7 +2,7 @@ package sdproject
 
 import (
 	"context"
-	chord "sdproject/protos"
+	"sdproject/protos"
 	"time"
 
 	"google.golang.org/grpc"
@@ -10,11 +10,11 @@ import (
 
 type GrpcConn struct {
 	addr   string
-	client chord.ChordClient
+	client protos.ChordClient
 	conn   *grpc.ClientConn
 }
 
-func (node *Node) NewGrpcConn(remoteConn *chord.Node) (chord.ChordClient, error) {
+func (node *Node) NewGrpcConn(remoteConn *protos.Node) (protos.ChordClient, error) {
 	grpcConn, ok := node.Pool[remoteConn.Address]
 	if ok {
 		return grpcConn.client, nil
@@ -35,7 +35,7 @@ func (node *Node) NewGrpcConn(remoteConn *chord.Node) (chord.ChordClient, error)
 		panic(err)
 	}
 
-	client := chord.NewChordClient(conn)
+	client := protos.NewChordClient(conn)
 
 	grpcConn = &GrpcConn{remoteConn.Address, client, conn}
 	node.Pool[remoteConn.Address] = grpcConn
