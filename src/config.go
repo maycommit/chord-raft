@@ -6,9 +6,11 @@ import (
 )
 
 type Config struct {
-	ChordSize   int
-	MemorySize  int
-	GrpcTimeout int
+	ChordSize              int
+	MemorySize             int
+	GrpcTimeout            int
+	StabilizeInterval      int
+	FixFingerTableInterval int
 }
 
 func NewConfig() *Config {
@@ -16,6 +18,8 @@ func NewConfig() *Config {
 	newConfig.ChordSize, _ = strconv.Atoi(newConfig.getEnv("CHORD_SIZE", "3"))
 	newConfig.MemorySize, _ = strconv.Atoi(newConfig.getEnv("MEMORY_SIZE", "2"))
 	newConfig.GrpcTimeout, _ = strconv.Atoi(newConfig.getEnv("GRPC_TIMEOUT", "8"))
+	newConfig.StabilizeInterval, _ = strconv.Atoi(newConfig.getEnv("STABILIZE_INTERVAL", "100"))
+	newConfig.FixFingerTableInterval, _ = strconv.Atoi(newConfig.getEnv("FIX_FINGER_TABLE_INTERVAL", "100"))
 
 	return newConfig
 }
