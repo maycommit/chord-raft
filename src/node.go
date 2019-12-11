@@ -2,12 +2,9 @@ package sdproject
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"math/rand"
 	"net"
-	"os"
-	"os/signal"
 	"sdproject/protos"
 	"time"
 
@@ -22,9 +19,10 @@ type Node struct {
 	Config      *Config
 	FingerTable []*protos.Node
 	Pool        map[string]*GrpcConn
+	Log         *Log
+	Snapshot    *Snapshot
+	StopNode    chan struct{}
 }
-
-var osChannel chan os.Signal
 
 func NewNode(address, parentNode string, id int64) (*Node, error) {
 	node := &Node{
@@ -34,16 +32,15 @@ func NewNode(address, parentNode string, id int64) (*Node, error) {
 	node.Id = node.newId(parentNode, id)
 	node.Address = address
 	node.Pool = make(map[string]*GrpcConn)
-	node.Storage = NewStorage()
 	node.FingerTable = make([]*protos.Node, node.Config.ChordSize)
+	node.Log = NewLog(address, node.Config.LogPath)
+	node.Snapshot = NewSnapshot(address, node.Config.SnapPath)
+	node.Storage = NewStorage(node.Log)
 
 	listen, err := node.startTCPServer()
 	if err != nil {
 		return nil, err
 	}
-
-	osChannel = make(chan os.Signal)
-	signal.Notify(osChannel, os.Interrupt)
 
 	grpcServer := grpc.NewServer()
 	protos.RegisterChordServer(grpcServer, node)
@@ -53,6 +50,7 @@ func NewNode(address, parentNode string, id int64) (*Node, error) {
 	go grpcServer.Serve(listen)
 	go node.asyncStabilize()
 	go node.asyncFixFingerTable()
+	go node.asyncFlushMemory()
 
 	return node, nil
 }
@@ -63,7 +61,7 @@ func (node *Node) asyncStabilize() {
 		select {
 		case <-ticker.C:
 			node.stabilize()
-		case <-osChannel:
+		case <-node.StopNode:
 			node.leaveNode()
 			return
 		}
@@ -77,7 +75,20 @@ func (node *Node) asyncFixFingerTable() {
 		select {
 		case <-ticker.C:
 			next = node.fixFingerTable(next)
-		case <-osChannel:
+		case <-node.StopNode:
+			node.leaveNode()
+			return
+		}
+	}
+}
+
+func (node *Node) asyncFlushMemory() {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	for {
+		select {
+		case <-ticker.C:
+			node.flushMemory()
+		case <-node.StopNode:
 			node.leaveNode()
 			return
 		}
@@ -85,7 +96,7 @@ func (node *Node) asyncFixFingerTable() {
 }
 
 func (node *Node) leaveNode() {
-	log.Print("LEAVE NODE...")
+	close(node.StopNode)
 	return
 }
 
@@ -302,7 +313,7 @@ func (node *Node) storeGet(key int64) (string, error) {
 	}
 
 	if closestNode.Address == node.Address {
-		NewLog("info", "storeGet", fmt.Sprintf("Dado recuperado do node %s", closestNode.Address))
+		NewTracer("info", "storeGet", fmt.Sprintf("Dado recuperado do node %s", closestNode.Address))
 		return node.Storage.Get(key)
 	}
 
@@ -322,7 +333,7 @@ func (node *Node) storeSet(key int64, value string) error {
 
 	if closestNode.Address == node.Address {
 		node.Storage.Set(key, value)
-		NewLog("info", "storeSet", fmt.Sprintf("Dado inserido no node %s", closestNode.Address))
+		NewTracer("info", "storeSet", fmt.Sprintf("Dado inserido no node %s", closestNode.Address))
 		return nil
 	}
 
@@ -332,4 +343,13 @@ func (node *Node) storeSet(key int64, value string) error {
 	}
 
 	return nil
+}
+
+func (node *Node) flushMemory() {
+	if node.Storage.SnapshotTrigger < node.Config.SnapshotTrigger {
+		return
+	}
+
+	node.Snapshot.NewSnapshotFile(node.Storage.Data)
+	node.Storage.SnapshotTriggerClear()
 }

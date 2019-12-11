@@ -5,12 +5,20 @@ import (
 	"strconv"
 )
 
+const projectPath = "~/.sdproject"
+const logsPath = "./logs"
+const snapsPath = "./snaps"
+
 type Config struct {
 	ChordSize              int
 	MemorySize             int
 	GrpcTimeout            int
 	StabilizeInterval      int
 	FixFingerTableInterval int
+	FlushMemoryInterval    int
+	SnapshotTrigger        int
+	LogPath                string
+	SnapPath               string
 }
 
 func NewConfig() *Config {
@@ -20,6 +28,10 @@ func NewConfig() *Config {
 	newConfig.GrpcTimeout, _ = strconv.Atoi(newConfig.getEnv("GRPC_TIMEOUT", "8"))
 	newConfig.StabilizeInterval, _ = strconv.Atoi(newConfig.getEnv("STABILIZE_INTERVAL", "100"))
 	newConfig.FixFingerTableInterval, _ = strconv.Atoi(newConfig.getEnv("FIX_FINGER_TABLE_INTERVAL", "100"))
+	newConfig.FlushMemoryInterval, _ = strconv.Atoi(newConfig.getEnv("FLUSH_MEMORY_INTERVAL", "100"))
+	newConfig.SnapshotTrigger, _ = strconv.Atoi(newConfig.getEnv("SNAPSHOT_TRIGGER", "3"))
+	newConfig.LogPath = logsPath
+	newConfig.SnapPath = snapsPath
 
 	return newConfig
 }

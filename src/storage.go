@@ -5,13 +5,21 @@ import (
 )
 
 type Storage struct {
-	Data map[int64]string
+	Log             *Log
+	Data            map[int64]string
+	SnapshotTrigger int
 }
 
-func NewStorage() *Storage {
+func NewStorage(log *Log) *Storage {
 	return &Storage{
-		Data: make(map[int64]string),
+		Log:             log,
+		Data:            make(map[int64]string),
+		SnapshotTrigger: 0,
 	}
+}
+
+func (storage *Storage) SnapshotTriggerClear() {
+	storage.SnapshotTrigger = 0
 }
 
 func (storage *Storage) Get(key int64) (string, error) {
@@ -24,5 +32,14 @@ func (storage *Storage) Get(key int64) (string, error) {
 }
 
 func (storage *Storage) Set(key int64, value string) {
+	logData := storage.Log.CreateLogData(key, value)
+	err := storage.Log.NewLogLine(logData)
+
+	if err != nil {
+		NewTracer("error", "Set", err.Error())
+		return
+	}
+
+	storage.SnapshotTrigger += 1
 	storage.Data[key] = value
 }
