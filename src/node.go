@@ -2,9 +2,12 @@ package sdproject
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"net"
+	"os"
+	"os/signal"
 	"sdproject/protos"
 	"time"
 
@@ -21,6 +24,8 @@ type Node struct {
 	Pool        map[string]*GrpcConn
 }
 
+var osChannel chan os.Signal
+
 func NewNode(address, parentNode string, id int64) (*Node, error) {
 	node := &Node{
 		Node:   new(protos.Node),
@@ -36,6 +41,9 @@ func NewNode(address, parentNode string, id int64) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	osChannel = make(chan os.Signal)
+	signal.Notify(osChannel, os.Interrupt)
 
 	grpcServer := grpc.NewServer()
 	protos.RegisterChordServer(grpcServer, node)
@@ -55,6 +63,9 @@ func (node *Node) asyncStabilize() {
 		select {
 		case <-ticker.C:
 			node.stabilize()
+		case <-osChannel:
+			node.leaveNode()
+			return
 		}
 	}
 }
@@ -66,8 +77,16 @@ func (node *Node) asyncFixFingerTable() {
 		select {
 		case <-ticker.C:
 			next = node.fixFingerTable(next)
+		case <-osChannel:
+			node.leaveNode()
+			return
 		}
 	}
+}
+
+func (node *Node) leaveNode() {
+	log.Print("LEAVE NODE...")
+	return
 }
 
 func (node *Node) startTCPServer() (net.Listener, error) {
