@@ -107,6 +107,28 @@ func commands() {
 				fmt.Printf("VALUE = %s\n", value.Value)
 			},
 		},
+		{
+			Name:    "storageSet",
+			Aliases: []string{"s", "set"},
+			Usage:   "Set data in node - (string int string)",
+			Action: func(c *cli.Context) {
+				conn, err := NewGrpcConn(c.Args().First())
+				if err != nil {
+					fmt.Printf("Connection error: ", err.Error())
+					return
+				}
+
+				key, _ := strconv.Atoi(c.Args().Get(1))
+				value := c.Args().Get(2)
+				_, err = conn.StorageSetRPC(context.Background(), &protos.Data{Key: int64(key), Value: value})
+				if err != nil {
+					fmt.Printf("Erro ao inserir dado!\n")
+					return
+				}
+
+				fmt.Printf("Dados inserido com sucesso\n")
+			},
+		},
 	}
 }
 
