@@ -10,5 +10,8 @@
 
 ## Usage
 ```sh
+# Add Execute permission to File
+# chmod +x ./sdproject_cli
+
 ./sdproject_cli --help
 ```
