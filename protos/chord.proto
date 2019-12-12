@@ -10,6 +10,7 @@ service Chord {
   rpc NotifyRPC(Node) returns (Any);
   rpc StorageGetRPC(Key) returns (Value);
   rpc StorageSetRPC(Data) returns (Any);
+  rpc StorageDeleteRPC(Key) returns (Any);
   rpc StorageGetAllRPC(Any) returns (Datas);
 }
 

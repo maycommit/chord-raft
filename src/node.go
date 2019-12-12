@@ -16,7 +16,6 @@ type Node struct {
 	protos.ChordServer
 	Predecessor *protos.Node
 	Storage     *Storage
-	Config      *Config
 	FingerTable []*protos.Node
 	Pool        map[string]*GrpcConn
 	Log         *Log
@@ -25,16 +24,16 @@ type Node struct {
 }
 
 func NewNode(address, parentNode string, id int64) (*Node, error) {
-	node := &Node{
-		Node:   new(protos.Node),
-		Config: NewConfig(),
-	}
+	NewConfig()
+	node := &Node{}
+	node.Node = new(protos.Node)
 	node.Id = node.newId(parentNode, id)
 	node.Address = address
+	node.StopNode = make(chan struct{})
 	node.Pool = make(map[string]*GrpcConn)
-	node.FingerTable = make([]*protos.Node, node.Config.ChordSize)
-	node.Log = NewLog(address, node.Config.LogPath)
-	node.Snapshot = NewSnapshot(address, node.Config.SnapPath, node.Log.Path)
+	node.FingerTable = make([]*protos.Node, GetIntEnv("CHORD_SIZE"))
+	node.Log = NewLog(address, GetEnv("LOGS_PATH"))
+	node.Snapshot = NewSnapshot(address, GetEnv("SNAPSHOTS_PATH"), node.Log.Path)
 	node.Storage = NewStorage(node.Log, node.Snapshot.GetLatestSnapshotData())
 
 	listen, err := node.startTCPServer()
@@ -51,8 +50,22 @@ func NewNode(address, parentNode string, id int64) (*Node, error) {
 	go node.asyncStabilize()
 	go node.asyncFixFingerTable()
 	go node.asyncFlushMemory()
+	go node.asyncFixStorage()
 
 	return node, nil
+}
+
+func (node *Node) asyncFixStorage() {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	for {
+		select {
+		case <-ticker.C:
+			node.fixStorage()
+		case <-node.StopNode:
+			node.LeaveNode()
+			return
+		}
+	}
 }
 
 func (node *Node) asyncStabilize() {
@@ -62,7 +75,7 @@ func (node *Node) asyncStabilize() {
 		case <-ticker.C:
 			node.stabilize()
 		case <-node.StopNode:
-			node.leaveNode()
+			node.LeaveNode()
 			return
 		}
 	}
@@ -76,7 +89,7 @@ func (node *Node) asyncFixFingerTable() {
 		case <-ticker.C:
 			next = node.fixFingerTable(next)
 		case <-node.StopNode:
-			node.leaveNode()
+			node.LeaveNode()
 			return
 		}
 	}
@@ -89,13 +102,26 @@ func (node *Node) asyncFlushMemory() {
 		case <-ticker.C:
 			node.flushMemory()
 		case <-node.StopNode:
-			node.leaveNode()
+			node.LeaveNode()
 			return
 		}
 	}
 }
 
-func (node *Node) leaveNode() {
+func (node *Node) fixStorage() {
+	for key, value := range node.Storage.Data {
+		closestNode, _ := node.findSuccessor(key)
+
+		if closestNode.Id == node.Id {
+			return
+		}
+
+		node.StorageSetGRPC(closestNode, key, value)
+		node.Storage.Delete(key)
+	}
+}
+
+func (node *Node) LeaveNode() {
 	close(node.StopNode)
 	return
 }
@@ -111,7 +137,7 @@ func (node *Node) startTCPServer() (net.Listener, error) {
 
 func (node *Node) newId(parentNode string, id int64) int64 {
 	min := 1
-	max := math.Pow(2, float64(node.Config.ChordSize))
+	max := math.Pow(2, float64(GetIntEnv("CHORD_SIZE")))
 
 	if parentNode == "" {
 		return 0
@@ -258,16 +284,26 @@ func (node *Node) stabilize() {
 	node.NotifyGRPC(node.getSuccessor(), node.Node)
 }
 
+func (node *Node) transferKeys(target *protos.Node, init int64, end int64) {
+	count := 0
+	for key, value := range node.Storage.Data {
+		if node.betweenID(key, init, end) || key == end {
+			node.StorageSetGRPC(target, key, value)
+			delete(node.Storage.Data, key)
+			count++
+		}
+	}
+}
+
 func (node *Node) notify(x *protos.Node) {
-	predecessor := node.Predecessor
-	if predecessor == nil || node.betweenID(x.Id, predecessor.Id, node.Id) {
+	if node.Predecessor == nil || node.betweenID(x.Id, node.Predecessor.Id, node.Id) {
 		node.setPredecessor(x)
 	}
 }
 
 func (node *Node) fingerStart(i int) int64 {
 	a := math.Pow(2, float64(i))
-	b := math.Pow(2, float64(node.Config.ChordSize))
+	b := math.Pow(2, float64(GetIntEnv("CHORD_SIZE")))
 	sum := float64(node.Node.Id) + a
 	mod := math.Mod(sum, b)
 
@@ -275,7 +311,7 @@ func (node *Node) fingerStart(i int) int64 {
 }
 
 func (node *Node) fixFingerTable(count int) int {
-	count = (count + 1) % node.Config.ChordSize
+	count = (count + 1) % GetIntEnv("CHORD_SIZE")
 	fingerStart := node.fingerStart(count)
 	successor, err := node.findSuccessor(fingerStart)
 	if err != nil {
@@ -306,7 +342,7 @@ func (node *Node) String() string {
 	return s
 }
 
-func (node *Node) storeGet(key int64) (string, error) {
+func (node *Node) StorageGet(key int64) (string, error) {
 	closestNode, err := node.findSuccessor(key)
 	if err != nil {
 		return "", err
@@ -325,7 +361,7 @@ func (node *Node) storeGet(key int64) (string, error) {
 	return result.Value, nil
 }
 
-func (node *Node) storeSet(key int64, value string) error {
+func (node *Node) StorageSet(key int64, value string) error {
 	closestNode, err := node.findSuccessor(key)
 	if err != nil {
 		return err
@@ -345,8 +381,32 @@ func (node *Node) storeSet(key int64, value string) error {
 	return nil
 }
 
+func (node *Node) StorageDelete(key int64) error {
+	closestNode, err := node.findSuccessor(key)
+	if err != nil {
+		return err
+	}
+
+	if closestNode.Address == node.Address {
+		node.Storage.Delete(key)
+		NewTracer("info", "StorageDelete", fmt.Sprintf("Dado removido no node %s", closestNode.Address))
+		return nil
+	}
+
+	err = node.StorageDeleteGRPC(closestNode, key)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (node *Node) flushMemory() {
-	if node.Storage.SnapshotTrigger < node.Config.SnapshotTrigger {
+	if !GetBoolEnv("PERSISTENCE") {
+		return
+	}
+
+	if node.Storage.SnapshotTrigger < GetIntEnv("SNAPSHOT_MAX_TRIGGER") {
 		return
 	}
 

@@ -50,43 +50,39 @@ func commands() {
 	app.Commands = []cli.Command{
 		{
 			Name:    "createChord",
-			Aliases: []string{"cd", "create"},
+			Aliases: []string{"c", "create"},
 			Usage:   "Create chord (string)",
-			Flags: []cli.Flag{
-				&cli.BoolFlag{Name: "watch, w"},
-			},
 			Action: func(c *cli.Context) {
 				node, err := node.NewNode(c.Args().Get(0), "", 0)
 				if err != nil {
 					panic(err)
 				}
 
-				if c.Bool("watch") {
-					for {
-						time.Sleep(1000 * time.Millisecond)
-						fmt.Printf(node.String())
-					}
+				for {
+					time.Sleep(2000 * time.Millisecond)
+					fmt.Printf(node.String())
 				}
 			},
 		},
 		{
 			Name:    "joinNode",
 			Aliases: []string{"j", "join"},
-			Usage:   "Join node in chord - (string string)",
-			Flags: []cli.Flag{
-				&cli.BoolFlag{Name: "watch, w"},
-			},
+			Usage:   "Join node in chord - (string string int)",
 			Action: func(c *cli.Context) {
-				node, err := node.NewNode(c.Args().Get(0), c.Args().Get(1), -1)
+				id := -1
+
+				if c.Args().Get(2) != "" {
+					id, _ = strconv.Atoi(c.Args().Get(2))
+				}
+
+				node, err := node.NewNode(c.Args().Get(0), c.Args().Get(1), int64(id))
 				if err != nil {
 					panic(err)
 				}
 
-				if c.Bool("watch") {
-					for {
-						time.Sleep(1000 * time.Millisecond)
-						fmt.Printf(node.String())
-					}
+				for {
+					time.Sleep(2000 * time.Millisecond)
+					fmt.Printf(node.String())
 				}
 			},
 		},
@@ -104,7 +100,7 @@ func commands() {
 				key, _ := strconv.Atoi(c.Args().Get(1))
 				value, _ := conn.StorageGetRPC(context.Background(), &protos.Key{Key: int64(key)})
 
-				fmt.Printf("VALUE = %s\n", value.Value)
+				fmt.Println(value)
 			},
 		},
 		{

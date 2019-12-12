@@ -20,6 +20,10 @@ func NewLog(address, logsPath string) *Log {
 }
 
 func (log *Log) NewLogNodeDir(address, logsPath string) string {
+	if !GetBoolEnv("PERSISTENCE") {
+		return ""
+	}
+
 	splitAddress := strings.Split(address, ":")
 	fileName := logsPath + "/" + IsLocalhost(splitAddress[0]) + "-" + splitAddress[1]
 	_ = NewDir(fileName, "")
@@ -28,6 +32,10 @@ func (log *Log) NewLogNodeDir(address, logsPath string) string {
 }
 
 func (log *Log) NewBatchLogFile() string {
+	if !GetBoolEnv("PERSISTENCE") {
+		return ""
+	}
+
 	fileName := log.Path + "/" + BuildUniqueFileName() + ".log"
 	_, _ = NewFile(fileName)
 
@@ -35,6 +43,10 @@ func (log *Log) NewBatchLogFile() string {
 }
 
 func (log *Log) NewLogLine(data string) error {
+	if !GetBoolEnv("PERSISTENCE") {
+		return nil
+	}
+
 	NewTracer("info", "NewLogLine", fmt.Sprintf("Novo dado no log %s\n", log.Filename))
 	file, err := os.OpenFile(log.Filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
 	if err != nil {
@@ -52,6 +64,10 @@ func (log *Log) NewLogLine(data string) error {
 	return nil
 }
 
-func (log *Log) CreateLogData(key int64, value string) string {
+func (log *Log) SetLogData(key int64, value string) string {
 	return "SET " + fmt.Sprint(key) + " " + value
+}
+
+func (log *Log) DeleteLogData(key int64) string {
+	return "DELETE " + fmt.Sprint(key)
 }

@@ -30,11 +30,16 @@ func (node *Node) NotifyRPC(ctx context.Context, x *protos.Node) (*protos.Any, e
 }
 
 func (node *Node) StorageGetRPC(ctx context.Context, key *protos.Key) (*protos.Value, error) {
-	value, err := node.storeGet(key.Key)
+	value, err := node.StorageGet(key.Key)
 	return &protos.Value{Value: value}, err
 }
 
 func (node *Node) StorageSetRPC(ctx context.Context, data *protos.Data) (*protos.Any, error) {
-	node.storeSet(data.Key, data.Value)
+	node.StorageSet(data.Key, data.Value)
+	return &protos.Any{}, nil
+}
+
+func (node *Node) StorageDeleteRPC(ctx context.Context, data *protos.Key) (*protos.Any, error) {
+	node.StorageDelete(data.Key)
 	return &protos.Any{}, nil
 }

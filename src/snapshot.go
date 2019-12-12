@@ -70,6 +70,10 @@ func (snapshot *Snapshot) GetLatestSnapshotData() map[int64]string {
 }
 
 func (snapshot *Snapshot) LoadInitialSnapshot(logsPath string) (string, error) {
+	if !GetBoolEnv("PERSISTENCE") {
+		return "", nil
+	}
+
 	storageData := snapshot.GetLatestSnapshotData()
 	allLogs := snapshot.getAllLogs(logsPath)
 	if len(allLogs) <= 0 {
@@ -93,6 +97,10 @@ func (snapshot *Snapshot) LoadInitialSnapshot(logsPath string) (string, error) {
 }
 
 func (snapshot *Snapshot) NewNodeSnapshotDir(address, snapshotPath string) string {
+	if !GetBoolEnv("PERSISTENCE") {
+		return ""
+	}
+
 	splitAddress := strings.Split(address, ":")
 	fileName := snapshotPath + "/" + IsLocalhost(splitAddress[0]) + "-" + splitAddress[1]
 	_ = NewDir(fileName, "")

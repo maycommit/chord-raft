@@ -101,6 +101,22 @@ func (node *Node) StorageSetGRPC(remoteConn *protos.Node, key int64, value strin
 	return nil
 }
 
+func (node *Node) StorageDeleteGRPC(remoteConn *protos.Node, key int64) error {
+	conn, err := node.NewGrpcConn(remoteConn)
+	if err != nil {
+		NewTracer("error", "StorageDeleteGRPC", err.Error())
+		return err
+	}
+
+	_, err = conn.StorageDeleteRPC(context.Background(), &protos.Key{Key: key})
+	if err != nil {
+		NewTracer("error", "StorageDeleteGRPC", err.Error())
+		return err
+	}
+
+	return nil
+}
+
 func (node *Node) StorageGetAllGRPC(remoteConn *protos.Node) (*protos.Datas, error) {
 	conn, err := node.NewGrpcConn(remoteConn)
 	if err != nil {

@@ -32,7 +32,7 @@ func (storage *Storage) Get(key int64) (string, error) {
 }
 
 func (storage *Storage) Set(key int64, value string) {
-	logData := storage.Log.CreateLogData(key, value)
+	logData := storage.Log.SetLogData(key, value)
 	err := storage.Log.NewLogLine(logData)
 
 	if err != nil {
@@ -42,4 +42,16 @@ func (storage *Storage) Set(key int64, value string) {
 
 	storage.SnapshotTrigger += 1
 	storage.Data[key] = value
+}
+
+func (storage *Storage) Delete(key int64) {
+	logData := storage.Log.DeleteLogData(key)
+	err := storage.Log.NewLogLine(logData)
+
+	if err != nil {
+		NewTracer("error", "Delete", err.Error())
+		return
+	}
+
+	delete(storage.Data, key)
 }
