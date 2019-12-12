@@ -17,3 +17,10 @@
 # IDE
 .vscode
 .idea
+.DS_Store
+
+# Folders
+dist/mac/logs
+dist/mac/snaps
+dist/linux/logs
+dist/linux/snaps

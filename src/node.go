@@ -34,8 +34,8 @@ func NewNode(address, parentNode string, id int64) (*Node, error) {
 	node.Pool = make(map[string]*GrpcConn)
 	node.FingerTable = make([]*protos.Node, node.Config.ChordSize)
 	node.Log = NewLog(address, node.Config.LogPath)
-	node.Snapshot = NewSnapshot(address, node.Config.SnapPath)
-	node.Storage = NewStorage(node.Log)
+	node.Snapshot = NewSnapshot(address, node.Config.SnapPath, node.Log.Path)
+	node.Storage = NewStorage(node.Log, node.Snapshot.GetLatestSnapshotData())
 
 	listen, err := node.startTCPServer()
 	if err != nil {

@@ -10,10 +10,10 @@ type Storage struct {
 	SnapshotTrigger int
 }
 
-func NewStorage(log *Log) *Storage {
+func NewStorage(log *Log, data map[int64]string) *Storage {
 	return &Storage{
 		Log:             log,
-		Data:            make(map[int64]string),
+		Data:            data,
 		SnapshotTrigger: 0,
 	}
 }

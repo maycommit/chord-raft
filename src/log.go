@@ -53,5 +53,5 @@ func (log *Log) NewLogLine(data string) error {
 }
 
 func (log *Log) CreateLogData(key int64, value string) string {
-	return "CREATE K:" + fmt.Sprint(key) + " V:" + value
+	return "SET " + fmt.Sprint(key) + " " + value
 }
