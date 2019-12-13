@@ -6,14 +6,23 @@ import (
 	"math/rand"
 	"net"
 	"sdproject/protos"
+	"sync"
 	"time"
 
 	"google.golang.org/grpc"
 )
 
+type NodeMtx struct {
+	StorageMtx     sync.RWMutex
+	FingerTableMtx sync.RWMutex
+	PredecessorMtx sync.RWMutex
+	SnapshotMtx    sync.RWMutex
+}
+
 type Node struct {
 	*protos.Node
 	protos.ChordServer
+	NodeMtx
 	Predecessor *protos.Node
 	Storage     *Storage
 	FingerTable []*protos.Node
@@ -247,7 +256,9 @@ func (node *Node) getSuccessor() *protos.Node {
 }
 
 func (node *Node) setSuccessor(newSuccessor *protos.Node) {
+	node.FingerTableMtx.Lock()
 	node.FingerTable[0] = newSuccessor
+	node.FingerTableMtx.Unlock()
 }
 
 func (node *Node) getPredecessor() *protos.Node {
@@ -261,7 +272,9 @@ func (node *Node) getPredecessor() *protos.Node {
 }
 
 func (node *Node) setPredecessor(newPredecessor *protos.Node) {
+	node.PredecessorMtx.Lock()
 	node.Predecessor = newPredecessor
+	node.PredecessorMtx.Unlock()
 }
 
 func (node *Node) stabilize() {
@@ -362,6 +375,9 @@ func (node *Node) StorageGet(key int64) (string, error) {
 }
 
 func (node *Node) StorageSet(key int64, value string) error {
+	node.StorageMtx.Lock()
+	defer node.StorageMtx.Unlock()
+
 	closestNode, err := node.findSuccessor(key)
 	if err != nil {
 		return err
@@ -382,6 +398,9 @@ func (node *Node) StorageSet(key int64, value string) error {
 }
 
 func (node *Node) StorageDelete(key int64) error {
+	node.StorageMtx.Lock()
+	defer node.StorageMtx.Unlock()
+
 	closestNode, err := node.findSuccessor(key)
 	if err != nil {
 		return err
@@ -402,6 +421,9 @@ func (node *Node) StorageDelete(key int64) error {
 }
 
 func (node *Node) flushMemory() {
+	node.SnapshotMtx.Lock()
+	defer node.SnapshotMtx.Unlock()
+
 	if !GetBoolEnv("PERSISTENCE") {
 		return
 	}
