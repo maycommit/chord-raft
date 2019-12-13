@@ -51,7 +51,7 @@ func commands() {
 		{
 			Name:    "createChord",
 			Aliases: []string{"c", "create"},
-			Usage:   "Create chord (string)",
+			Usage:   "Create chord - {firstNodeAddress(srtring)}",
 			Action: func(c *cli.Context) {
 				node, err := node.NewNode(c.Args().Get(0), "", 0)
 				if err != nil {
@@ -67,7 +67,7 @@ func commands() {
 		{
 			Name:    "joinNode",
 			Aliases: []string{"j", "join"},
-			Usage:   "Join node in chord - (string string int)",
+			Usage:   "Join node in chord - {joinNodeAddress(string) referenceNodeAddress(string) joinNodeId(int)}",
 			Action: func(c *cli.Context) {
 				id := -1
 
@@ -89,7 +89,7 @@ func commands() {
 		{
 			Name:    "storageGet",
 			Aliases: []string{"g", "get"},
-			Usage:   "Get data in node - (string int)",
+			Usage:   "Get data in node - {nodeAddress(string) key(int)}",
 			Action: func(c *cli.Context) {
 				conn, err := NewGrpcConn(c.Args().First())
 				if err != nil {
@@ -106,7 +106,7 @@ func commands() {
 		{
 			Name:    "storageSet",
 			Aliases: []string{"s", "set"},
-			Usage:   "Set data in node - (string int string)",
+			Usage:   "Set data in node - {nodeAddress(string) key(int) value(string)}",
 			Action: func(c *cli.Context) {
 				conn, err := NewGrpcConn(c.Args().First())
 				if err != nil {
@@ -123,6 +123,27 @@ func commands() {
 				}
 
 				fmt.Printf("Dados inserido com sucesso\n")
+			},
+		},
+		{
+			Name:    "storageDelete",
+			Aliases: []string{"d", "delete"},
+			Usage:   "Delete data in node - {nodeAddress(string) key(int)}",
+			Action: func(c *cli.Context) {
+				conn, err := NewGrpcConn(c.Args().First())
+				if err != nil {
+					fmt.Printf("Connection error: ", err.Error())
+					return
+				}
+
+				key, _ := strconv.Atoi(c.Args().Get(1))
+				_, err = conn.StorageDeleteRPC(context.Background(), &protos.Key{Key: int64(key)})
+				if err != nil {
+					fmt.Printf("Erro ao deletar dado!\n")
+					return
+				}
+
+				fmt.Printf("Dados deletado com sucesso\n")
 			},
 		},
 	}
