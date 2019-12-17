@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -49,33 +51,20 @@ func info() {
 func commands() {
 	app.Commands = []cli.Command{
 		{
-			Name:    "createChord",
-			Aliases: []string{"c", "create"},
-			Usage:   "Create chord - {firstNodeAddress(srtring)}",
+			Name:    "readFile",
+			Aliases: []string{"r", "read"},
+			Usage:   "Read node file - {filePath(srtring)}",
 			Action: func(c *cli.Context) {
-				node, err := node.NewNode(c.Args().Get(0), "", 0)
+				nodeJSON, err := os.Open(c.Args().Get(0))
 				if err != nil {
 					panic(err)
 				}
 
-				for {
-					time.Sleep(2000 * time.Millisecond)
-					fmt.Printf(node.String())
-				}
-			},
-		},
-		{
-			Name:    "joinNode",
-			Aliases: []string{"j", "join"},
-			Usage:   "Join node in chord - {joinNodeAddress(string) referenceNodeAddress(string) joinNodeId(int)}",
-			Action: func(c *cli.Context) {
-				id := -1
+				byteValue, _ := ioutil.ReadAll(nodeJSON)
+				var nodeData *node.NodeData
+				json.Unmarshal([]byte(byteValue), &nodeData)
 
-				if c.Args().Get(2) != "" {
-					id, _ = strconv.Atoi(c.Args().Get(2))
-				}
-
-				node, err := node.NewNode(c.Args().Get(0), c.Args().Get(1), int64(id))
+				node, err := node.NewNode(nodeData)
 				if err != nil {
 					panic(err)
 				}

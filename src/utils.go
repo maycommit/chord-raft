@@ -1,6 +1,9 @@
 package sdproject
 
 import (
+	"math"
+	"math/rand"
+	"net"
 	"os"
 	"time"
 )
@@ -35,4 +38,45 @@ func NewFile(fileName string) (*os.File, error) {
 	}
 
 	return file, nil
+}
+
+func BetweenID(id, init, end int64) bool {
+	if init < end {
+		return id > init && id < end
+	}
+
+	if init > end {
+		return id > init || id < end
+	}
+
+	if init == end {
+		return id > init || id < init
+	}
+
+	return false
+}
+
+func StartTCPServer(address string) (net.Listener, error) {
+	listen, err := net.Listen("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+
+	return listen, nil
+}
+
+func NewId(parentNode string, id int64) int64 {
+	min := 1
+	max := math.Pow(2, float64(GetIntEnv("CHORD_SIZE")))
+
+	if parentNode == "" {
+		return 0
+	}
+
+	if id > 0 {
+		return id
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	return int64(rand.Intn(int(max)-min) + min)
 }

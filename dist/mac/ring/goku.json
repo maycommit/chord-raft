@@ -1,0 +1,21 @@
+{
+    "id": 0,
+    "address": ":8001",
+    "raftAddress": ":12001",
+    "raftDirectory": "./node-0",
+    "parent": "",
+    "replicas": [
+        {
+            "id": 1,
+            "address": ":8002",
+            "raftAddress": ":12002",
+            "raftDirectory": "./node-1"
+        },
+        {
+            "id": 2,
+            "address": ":8003",
+            "raftAddress": ":12003",
+            "raftDirectory": "./node-2"
+        }
+    ]
+}

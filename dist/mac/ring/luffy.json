@@ -1,0 +1,14 @@
+{
+    "id": 4,
+    "address": ":8010",
+    "parent": ":8001",
+    "raftAddress": ":12010",
+    "raftDirectory": "./node-4",
+    "replicas": [
+        {
+            "id": 41,
+            "address": ":8011",
+            "raftAddress": ":12011"
+        }
+    ]
+}

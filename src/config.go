@@ -3,6 +3,7 @@ package sdproject
 import (
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -20,9 +21,10 @@ func NewConfig() {
 		"FIX_FINGER_TABLE_INTERVAL": "100",
 		"FLUSH_MEMORY_INTERVAL":     "100",
 		"SNAPSHOT_MAX_TRIGGER":      "3",
-		"PERSISTENCE":               "true",
-		"LOGS_PATH":                 logsPath,
-		"SNAPSHOTS_PATH":            snapsPath,
+		"PERSISTENCE":               "false",
+		"MIN_REPLICAS":              "3",
+		"SNAPSHOT_COUNT":            "2",
+		"RAFT_TIMEOUT":              string(10 * time.Second),
 	}
 
 	for key, value := range configs {
@@ -51,4 +53,10 @@ func GetEnv(key string) string {
 func GetBoolEnv(key string) bool {
 	result, _ := strconv.ParseBool(os.Getenv(key))
 	return result
+}
+
+func GetTimeEnv(key string) time.Duration {
+	env := GetEnv(key)
+	duration, _ := time.ParseDuration(env)
+	return duration
 }
