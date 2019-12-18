@@ -58,6 +58,7 @@ func NewReplica(data *NodeData) (*Node, error) {
 func (node *Node) newRaftNode(isReplica bool) (*raft.Raft, error) {
 	config := raft.DefaultConfig()
 	config.LocalID = raft.ServerID(node.RaftID)
+	config.LogLevel = "ERROR"
 
 	addr, err := net.ResolveTCPAddr("tcp", node.RaftAddress)
 	if err != nil {

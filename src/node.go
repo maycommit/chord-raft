@@ -120,77 +120,97 @@ func (node *Node) fixStorage() {
 	}
 }
 
-func (node *Node) LeaveNode() {
-	NewTracer("info", "LeaveNode", "Leave node...")
+func (node *Node) Stop() {
+	close(node.StopNode)
+}
 
-	node.GRPCServer.Stop()
-
+func (node *Node) LeaveNodeWithReplicas() {
 	successor := node.getSuccessor()
 	predecessor := node.getPredecessor()
+	replicaSuccessor := node.Replicas[0]
 
-	if len(node.Replicas) > 0 {
-		replicaSuccessor := node.Replicas[0]
-
-		if node.Id == node.getPredecessor().Id {
-			_, err := node.SetPredecessorGRPC(replicaSuccessor, replicaSuccessor)
-			if err != nil {
-				NewTracer("error", "LeaveNode::SetPredecessorGRPC", err.Error())
-				return
-			}
-			NewTracer("info", "LeaveNode::SetPredecessorGRPC", "Change replica predecessor")
-		} else {
-			_, err := node.SetPredecessorGRPC(successor, replicaSuccessor)
-			if err != nil {
-				NewTracer("info", "LeaveNode::SetPredecessorGRPC", err.Error())
-				return
-			}
-			NewTracer("info", "LeaveNode::SetPredecessorGRPC", "Change predecessor of successor")
-		}
-
-		if node.Id == node.getSuccessor().Id {
-			_, err := node.SetSuccessorGRPC(replicaSuccessor, replicaSuccessor)
-			if err != nil {
-				NewTracer("error", "LeaveNode::SetSuccessorGRPC", err.Error())
-				return
-			}
-			NewTracer("info", "LeaveNode::SetSuccessorGRPC", "Change replica successor")
-		} else {
-			_, err := node.SetSuccessorGRPC(predecessor, replicaSuccessor)
-			if err != nil {
-				NewTracer("info", "LeaveNode::SetSuccessorGRPC", err.Error())
-				return
-			}
-			NewTracer("info", "LeaveNode::SetSuccessorGRPC", "Change successor of predecessor")
-		}
-
-		_, err := node.JoinGRPC(replicaSuccessor, &protos.Node{Address: node.Parent})
+	if node.Id == node.getPredecessor().Id {
+		_, err := node.SetPredecessorGRPC(replicaSuccessor, replicaSuccessor)
 		if err != nil {
-			NewTracer("error", "LeaveNode::JoinGRPC", err.Error())
+			NewTracer("error", "LeaveNode::SetPredecessorGRPC", err.Error())
 			return
 		}
-
-		NewTracer("info", "LeaveNode::JoinGRPC", "Add replica to chord!")
-
-		// node.LeaveGRPC(&protos.Node{Address: replicaSuccessor.Address}, &protos.Node{Address: node.Address})
-
-		for _, conn := range node.Pool {
-			conn.conn.Close()
+		NewTracer("info", "LeaveNode::SetPredecessorGRPC", "Change replica predecessor")
+	} else {
+		_, err := node.SetPredecessorGRPC(successor, replicaSuccessor)
+		if err != nil {
+			NewTracer("info", "LeaveNode::SetPredecessorGRPC", err.Error())
+			return
 		}
+		NewTracer("info", "LeaveNode::SetPredecessorGRPC", "Change predecessor of successor")
+	}
+
+	if node.Id == node.getSuccessor().Id {
+		_, err := node.SetSuccessorGRPC(replicaSuccessor, replicaSuccessor)
+		if err != nil {
+			NewTracer("error", "LeaveNode::SetSuccessorGRPC", err.Error())
+			return
+		}
+		NewTracer("info", "LeaveNode::SetSuccessorGRPC", "Change replica successor")
+	} else {
+		_, err := node.SetSuccessorGRPC(predecessor, replicaSuccessor)
+		if err != nil {
+			NewTracer("info", "LeaveNode::SetSuccessorGRPC", err.Error())
+			return
+		}
+		NewTracer("info", "LeaveNode::SetSuccessorGRPC", "Change successor of predecessor")
+	}
+
+	_, err := node.JoinGRPC(replicaSuccessor, &protos.Node{Address: node.Parent})
+	if err != nil {
+		NewTracer("error", "LeaveNode::JoinGRPC", err.Error())
 		return
 	}
 
-	// if node.getSuccessor().Id != node.Id && node.getPredecessor() != nil {
-	// _, err := node.SetPredecessorGRPC(node.getSuccessor(), node.getPredecessor())
-	// if err != nil {
-	// 	NewTracer("info", "LeaveNode::SetPredecessorGRPC", err.Error())
-	// 	return
-	// }
-	// _, err = node.SetSuccessorGRPC(node.getPredecessor(), node.getSuccessor())
-	// if err != nil {
-	// 	NewTracer("info", "LeaveNode::SetSuccessorGRPC", err.Error())
-	// 	return
-	// }
-	// }
+	node.Replicas = node.Replicas[1:]
+
+	NewTracer("info", "LeaveNode::JoinGRPC", "Add replica to chord!")
+
+	return
+
+}
+
+func (node *Node) LeaveNodeNoReplicas() {
+	successor := node.getSuccessor()
+	predecessor := node.getPredecessor()
+
+	if node.Node.Id != successor.Id && predecessor != nil {
+		_, err := node.SetPredecessorGRPC(successor, predecessor)
+		if err != nil {
+			NewTracer("info", "LeaveNode::SetPredecessorGRPC", err.Error())
+			return
+		}
+		NewTracer("info", "LeaveNode::SetPredecessorGRPC", "Change predecessor of successor")
+
+		_, err = node.SetSuccessorGRPC(predecessor, successor)
+		if err != nil {
+			NewTracer("info", "LeaveNode::SetSuccessorGRPC", err.Error())
+			return
+		}
+		NewTracer("info", "LeaveNode::SetSuccessorGRPC", "Change successor of predecessor")
+	}
+}
+
+func (node *Node) LeaveNode() {
+	NewTracer("info", "LeaveNode", "Leave node...")
+
+	if len(node.Replicas) > 0 {
+		node.LeaveNodeWithReplicas()
+	} else {
+		node.LeaveNodeNoReplicas()
+	}
+
+	node.GRPCServer.Stop()
+	node.Raft.Shutdown()
+
+	for _, conn := range node.Pool {
+		conn.conn.Close()
+	}
 
 	return
 }
@@ -322,7 +342,6 @@ func (node *Node) stabilize() {
 
 func (node *Node) notify(x *protos.Node) {
 	if node.Predecessor == nil || BetweenID(x.Id, node.Predecessor.Id, node.Id) {
-		NewTracer("info", "notify::setPredecessor", "Novo predecessor!")
 		node.setPredecessor(x)
 	}
 }

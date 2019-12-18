@@ -1,103 +1,165 @@
-package sdproject
+package test
 
 import (
-	"log"
+	"fmt"
 	"testing"
 	"time"
 
-	node "sdproject/src"
-
-	"gotest.tools/assert"
+	sdproject "sdproject/src"
 )
 
-func TestNodeFindSuccessor(t *testing.T) {
-	node01, err := node.NewNode(":8001", "", -1)
+func TestNodeJoin(t *testing.T) {
+	fmt.Println("------- TestNodeJoin ---------")
+	nodeData0 := GenerateNode(0, ":8000", "", ":12000")
+	node0, err := sdproject.NewNode(nodeData0, false)
 	if err != nil {
-		log.Println(err)
+		t.Error(err.Error())
 		return
 	}
 
-	node02, err := node.NewNode(":8002", ":8001", 4)
+	nodeData1 := GenerateNode(4, ":8002", ":8000", ":12001")
+	node1, err := sdproject.NewNode(nodeData1, false)
 	if err != nil {
-		log.Println(err)
+		t.Error(err.Error())
 		return
 	}
 
-	node03, err := node.NewNode(":8003", ":8002", 2)
+	nodeData2 := GenerateNode(2, ":8003", ":8000", ":12002")
+	node2, err := sdproject.NewNode(nodeData2, false)
 	if err != nil {
-		log.Println(err)
+		t.Error(err.Error())
 		return
 	}
 
 	time.Sleep(1 * time.Second)
 
-	assert.Equal(t, node01.FingerTable[0].Id, int64(2))
-	assert.Equal(t, node02.FingerTable[0].Id, int64(0))
-	assert.Equal(t, node03.FingerTable[0].Id, int64(4))
+	fmt.Println(node0.String())
+	fmt.Println(node1.String())
+	fmt.Println(node2.String())
+
+	defer node1.LeaveNode()
 }
 
-func TestGetDataInNode(t *testing.T) {
-	node01, err := node.NewNode(":8081", "", -1)
+func TestAddReplicaToNode(t *testing.T) {
+	fmt.Println("------- TestAddReplicaToNode ---------")
+	nodeData0 := GenerateNode(0, ":9000", "", ":13000")
+	node0, err := sdproject.NewNode(nodeData0, false)
 	if err != nil {
-		log.Println(err)
+		t.Error(err.Error())
 		return
 	}
 
-	node02, err := node.NewNode(":8082", ":8081", 4)
-	if err != nil {
-		log.Println(err)
-		return
+	replicas := []*sdproject.NodeData{
+		GenerateNode(0, ":9001", ":9000", ":13001"),
+		GenerateNode(0, ":9002", ":9000", ":13002"),
+		GenerateNode(0, ":9003", ":9000", ":13003"),
 	}
 
-	_, err = node.NewNode(":8083", ":8082", 2)
-	if err != nil {
-		log.Println(err)
-		return
+	for _, replica := range replicas {
+		_, err = sdproject.NewReplica(replica)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
 	}
 
 	time.Sleep(1 * time.Second)
 
-	node01.StorageSetGRPC(node02.Node, 1, "Maycon")
+	fmt.Println(node0.String())
 
-	result, err := node01.StorageGetGRPC(node02.Node, 1)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	assert.Equal(t, result.Value, "Maycon")
+	defer node0.LeaveNode()
 }
 
-func TestTransferKeys(t *testing.T) {
-	node01, err := node.NewNode(":8091", "", -1)
+func TestAddReplicaToChord(t *testing.T) {
+	fmt.Println("------- TestAddReplicaToChord ---------")
+
+	nodeData0 := GenerateNode(0, ":10000", "", ":14000")
+	node0, err := sdproject.NewNode(nodeData0, false)
 	if err != nil {
-		log.Println(err)
+		t.Error(err.Error())
 		return
 	}
 
-	node01.StorageSet(1, "Maycon")
-	node01.StorageSet(2, "Lucas")
-	node01.StorageSet(4, "Antonio")
-	node01.StorageSet(6, "Machado")
-
-	node02, err := node.NewNode(":8092", ":8091", 4)
+	nodeData1 := GenerateNode(4, ":10001", ":10000", ":14001")
+	node1, err := sdproject.NewNode(nodeData1, false)
 	if err != nil {
-		log.Println(err)
+		t.Error(err.Error())
 		return
 	}
 
-	node03, err := node.NewNode(":8093", ":8092", 2)
-	if err != nil {
-		log.Println(err)
-		return
+	replicas := []*sdproject.NodeData{
+		GenerateNode(4, ":10002", ":10001", ":14002"),
+		GenerateNode(4, ":10003", ":10001", ":14003"),
+		GenerateNode(4, ":10004", ":10001", ":14004"),
 	}
+
+	for _, replica := range replicas {
+		_, err = sdproject.NewReplica(replica)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+	}
+
 	time.Sleep(1 * time.Second)
 
-	storageDataNode02, _ := node02.Storage.Get(4)
-	storageDataNode03First, _ := node03.Storage.Get(1)
-	storageDataNode03Second, _ := node03.Storage.Get(2)
+	node1.LeaveNode()
 
-	assert.Equal(t, storageDataNode02, "Antonio")
-	assert.Equal(t, storageDataNode03First, "Maycon")
-	assert.Equal(t, storageDataNode03Second, "Lucas")
+	time.Sleep(1 * time.Second)
+
+	fmt.Println(node0.String())
+
+	defer node0.LeaveNode()
+}
+
+func TestLogReplication(t *testing.T) {
+	fmt.Println("------- TestLogReplication ---------")
+
+	nodeData0 := GenerateNode(0, ":11000", "", ":15000")
+	node0, err := sdproject.NewNode(nodeData0, false)
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+
+	nodeData1 := GenerateNode(4, ":11001", ":11000", ":15001")
+	node1, err := sdproject.NewNode(nodeData1, false)
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+
+	replicasData := []*sdproject.NodeData{
+		GenerateReplica(4, 41, ":11002", ":11001", ":15002"),
+		GenerateReplica(4, 42, ":11003", ":11001", ":15003"),
+		GenerateReplica(4, 43, ":11004", ":11001", ":15004"),
+	}
+
+	replicas := []*sdproject.Node{}
+
+	for _, replica := range replicasData {
+		newReplica, err := sdproject.NewNode(replica, true)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+
+		replicas = append(replicas, newReplica)
+	}
+
+	node0.StorageSet(2, "Maycon")
+	node1.StorageSet(3, "Vitor")
+	node0.StorageSet(4, "Joao")
+	node1.StorageSet(5, "Maria")
+
+	time.Sleep(1 * time.Second)
+
+	fmt.Println(node0.String())
+	fmt.Println(node1.String())
+	fmt.Println("REPLICAS:")
+	for _, replica := range replicas {
+		fmt.Println(replica.String())
+	}
+
+	defer node0.LeaveNode()
 }

@@ -29,6 +29,10 @@ type ApplyCommand struct {
 	Conn    *GrpcConn
 }
 
+type FSMSnapshot struct {
+	Store map[int64]string
+}
+
 func (node *Node) applySet(key int64, value string) {
 	command := &ApplyCommand{
 		Command: commandStoreSet,
@@ -141,13 +145,44 @@ func (node *Node) Apply(l *raft.Log) interface{} {
 }
 
 func (node *Node) Snapshot() (raft.FSMSnapshot, error) {
-	return nil, nil
+
+	storeClone := make(map[int64]string)
+	for key, value := range node.Storage {
+		storeClone[key] = value
+	}
+
+	return &FSMSnapshot{Store: storeClone}, nil
 }
 
 func (node *Node) Restore(r io.ReadCloser) error {
+	restoreStorage := make(map[int64]string)
+	if err := json.NewDecoder(r).Decode(&restoreStorage); err != nil {
+		return err
+	}
+
+	node.Storage = restoreStorage
 	return nil
 }
 
-func (node *Node) Persist(sink raft.SnapshotSink) error {
-	return nil
+func (fsmSnapshot *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
+	err := func() error {
+		b, err := json.Marshal(fsmSnapshot.Store)
+		if err != nil {
+			return err
+		}
+
+		if _, err := sink.Write(b); err != nil {
+			return err
+		}
+
+		return sink.Close()
+	}()
+
+	if err != nil {
+		sink.Cancel()
+	}
+
+	return err
 }
+
+func (fsmSnapshot *FSMSnapshot) Release() {}
