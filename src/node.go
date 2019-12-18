@@ -3,29 +3,20 @@ package sdproject
 import (
 	"fmt"
 	"math"
-	"net"
-	"os"
-	"path/filepath"
 	"sdproject/protos"
 	"sync"
-	"time"
 
 	"github.com/hashicorp/raft"
-	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"google.golang.org/grpc"
 )
 
-type Replica struct {
+type NodeData struct {
 	Id            int
+	RaftID        int
 	Address       string
+	Parent        string
 	RaftAddress   string
 	RaftDirectory string
-}
-
-type NodeData struct {
-	Replica
-	Parent   string
-	Replicas []Replica
 }
 
 type NodeMtx struct {
@@ -33,57 +24,87 @@ type NodeMtx struct {
 	FingerTableMtx sync.RWMutex
 	PredecessorMtx sync.RWMutex
 	SnapshotMtx    sync.RWMutex
+	PoolMtx        sync.RWMutex
 }
 
 type Node struct {
 	*protos.Node
 	protos.ChordServer
 	NodeMtx
+	Parent        string
 	Predecessor   *protos.Node
 	Storage       map[int64]string
 	FingerTable   []*protos.Node
 	Pool          map[string]*GrpcConn
-	Replicas      []Replica
+	GRPCServer    *grpc.Server
+	Replicas      []*protos.Node
+	RaftID        int
 	Raft          *raft.Raft
 	RaftAddress   string
 	RaftDirectory string
-	RaftServers   []raft.Server
+	Leader        *protos.Node
 	StopNode      chan struct{}
 }
 
-func NewNode(data *NodeData) (*Node, error) {
+func NewNode(data *NodeData, isReplica bool) (*Node, error) {
+	var err error
 	NewConfig()
 	node := &Node{}
 	node.Node = new(protos.Node)
-	node.Id = NewId(data.Parent, int64(data.Id))
+	node.Id = int64(data.Id)
+	node.Parent = data.Parent
 	node.Address = data.Address
+	node.RaftID = data.RaftID
 	node.RaftAddress = data.RaftAddress
 	node.RaftDirectory = data.RaftDirectory
-	node.Replicas = data.Replicas
+	node.Replicas = []*protos.Node{}
 	node.StopNode = make(chan struct{})
 	node.Pool = make(map[string]*GrpcConn)
 	node.FingerTable = make([]*protos.Node, GetIntEnv("CHORD_SIZE"))
 	node.Storage = make(map[int64]string)
-	node.RaftServers = node.createRaftServers(data.Replicas)
+
+	node.Raft, err = node.newRaftNode(isReplica)
+	if err != nil {
+		NewTracer("error", "NewNode::newRaftNode", err.Error())
+		return nil, err
+	}
+
+	if isReplica {
+		leaderNode := &protos.Node{Address: data.Parent}
+		joinNode := &protos.Node{Id: int64(node.Id), Address: data.Address}
+		joinRaftNode := &protos.Node{Id: int64(node.RaftID), Address: data.RaftAddress}
+		node.Leader, err = node.JoinRaftGRPC(leaderNode, &protos.MultipleNodes{ChordNode: joinNode, RaftNode: joinRaftNode})
+		if err != nil {
+			NewTracer("error", "NewNode::JoinRaftGRPC", err.Error())
+			return nil, err
+		}
+	} else {
+		<-node.Raft.LeaderCh()
+		node.Leader = node.Node
+	}
 
 	listen, err := StartTCPServer(data.Address)
 	if err != nil {
 		return nil, err
 	}
 
-	node.newRaftCluster()
+	node.GRPCServer = grpc.NewServer()
+	protos.RegisterChordServer(node.GRPCServer, node)
 
-	grpcServer := grpc.NewServer()
-	protos.RegisterChordServer(grpcServer, node)
+	go node.GRPCServer.Serve(listen)
+	go node.asyncFixRaftLeader()
 
-	node.createChordOrJoinNode(data.Parent)
+	if !isReplica {
+		node.createChordOrJoinNode(data.Parent)
+	}
 
-	go grpcServer.Serve(listen)
+	return node, nil
+}
+
+func (node *Node) StartAsyncProcess() {
 	go node.asyncStabilize()
 	go node.asyncFixFingerTable()
 	go node.asyncFixStorage()
-
-	return node, nil
 }
 
 func (node *Node) fixStorage() {
@@ -100,128 +121,50 @@ func (node *Node) fixStorage() {
 }
 
 func (node *Node) LeaveNode() {
-	close(node.StopNode)
+	NewTracer("info", "LeaveNode", "Leave node...")
+
+	node.GRPCServer.Stop()
+
+	if len(node.Replicas) > 0 {
+		replicaSuccessor := node.Replicas[0]
+
+		_, err := node.JoinGRPC(replicaSuccessor, &protos.Node{Address: node.Parent})
+		if err != nil {
+			NewTracer("error", "LeaveNode::JoinGRPC", err.Error())
+			return
+		}
+
+		NewTracer("info", "LeaveNode::JoinGRPC", "Add replica to chord!")
+
+		for _, conn := range node.Pool {
+			conn.conn.Close()
+		}
+		return
+	}
+
+	if node.getSuccessor().Id != node.Id && node.getPredecessor() != nil {
+		_, err := node.SetPredecessorGRPC(node.getSuccessor(), node.getPredecessor())
+		if err != nil {
+			NewTracer("info", "LeaveNode::SetPredecessorGRPC", err.Error())
+			return
+		}
+		_, err = node.SetSuccessorGRPC(node.getPredecessor(), node.getSuccessor())
+		if err != nil {
+			NewTracer("info", "LeaveNode::SetSuccessorGRPC", err.Error())
+			return
+		}
+	}
+
 	return
 }
 
 func (node *Node) createChordOrJoinNode(parentNode string) error {
 	if parentNode == "" {
 		node.create()
+		node.StartAsyncProcess()
 		return nil
 	}
 	return node.join(parentNode)
-}
-
-func (node *Node) raftPersistence() (raft.LogStore, raft.StableStore, error) {
-	if !GetBoolEnv("PERSISTENCE") {
-		logStore := raft.NewInmemStore()
-		stableStore := raft.NewInmemStore()
-		return logStore, stableStore, nil
-	}
-
-	os.MkdirAll(node.RaftDirectory, 0777)
-
-	boltDB, err := raftboltdb.NewBoltStore(filepath.Join(node.RaftDirectory, "raft.db"))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return boltDB, boltDB, nil
-
-}
-
-func (node *Node) raftSnapshotStore() (raft.SnapshotStore, error) {
-	if !GetBoolEnv("PERSISTENCE") {
-		return raft.NewInmemSnapshotStore(), nil
-	}
-
-	snapshots, err := raft.NewFileSnapshotStore(node.RaftDirectory, GetIntEnv("SNAPSHOT_COUNT"), os.Stderr)
-	if err != nil {
-		return nil, fmt.Errorf("file snapshot store: %s", err)
-	}
-
-	return snapshots, nil
-
-}
-
-func (node *Node) newRaftCluster() {
-	node.Raft, _ = node.newRaftNode(int(node.Id), node.RaftAddress, node.RaftDirectory)
-	for _, replica := range node.Replicas {
-		_, err := node.newRaftNode(replica.Id, replica.RaftAddress, replica.RaftDirectory)
-		if err != nil {
-			NewTracer("error", "newRaftCluster::newRaftNode", err.Error())
-			return
-		}
-
-		listen, err := StartTCPServer(replica.Address)
-		if err != nil {
-			fmt.Println("Error replica start")
-			return
-		}
-		NewTracer("info", "newRaftCluster", fmt.Sprintf("Repica %s started", replica.Address))
-
-		grpcServer := grpc.NewServer()
-		protos.RegisterChordServer(grpcServer, node)
-		go grpcServer.Serve(listen)
-	}
-
-	NewTracer("info", "newRaftCluster", "Cluster created!!!")
-}
-
-func (node *Node) createRaftServers(replicas []Replica) []raft.Server {
-	servers := make([]raft.Server, 0, len(replicas)+1)
-	servers = append(servers, raft.Server{
-		Suffrage: raft.Voter,
-		ID:       raft.ServerID(node.Id),
-		Address:  raft.ServerAddress(node.RaftAddress),
-	})
-
-	for _, replica := range replicas {
-		servers = append(servers, raft.Server{
-			Suffrage: raft.Voter,
-			ID:       raft.ServerID(replica.Id),
-			Address:  raft.ServerAddress(replica.RaftAddress),
-		})
-	}
-
-	return servers
-}
-
-func (node *Node) newRaftNode(id int, raftAddress, raftDirectory string) (*raft.Raft, error) {
-	config := raft.DefaultConfig()
-	config.LocalID = raft.ServerID(id)
-
-	addr, err := net.ResolveTCPAddr("tcp", raftAddress)
-	if err != nil {
-		return nil, err
-	}
-	transport, err := raft.NewTCPTransport(raftAddress, addr, 3, 10*time.Second, os.Stderr)
-	if err != nil {
-		return nil, err
-	}
-
-	logStore, stableStore, err := node.raftPersistence()
-	if err != nil {
-		return nil, err
-	}
-
-	snapshots, err := node.raftSnapshotStore()
-	if err != nil {
-		return nil, err
-	}
-
-	configuration := raft.Configuration{Servers: node.RaftServers}
-
-	if err = raft.BootstrapCluster(config, logStore, stableStore, snapshots, transport, configuration); err != nil {
-		return nil, err
-	}
-
-	raftImpl, err := raft.NewRaft(config, node, logStore, stableStore, snapshots, transport)
-	if err != nil {
-		return nil, fmt.Errorf("new raft: %s", err)
-	}
-
-	return raftImpl, nil
 }
 
 func (node *Node) create() {
@@ -238,6 +181,8 @@ func (node *Node) join(parentNode string) error {
 	}
 
 	node.setSuccessor(successor)
+
+	node.StartAsyncProcess()
 
 	return nil
 }
@@ -298,7 +243,7 @@ func (node *Node) getSuccessor() *protos.Node {
 
 func (node *Node) setSuccessor(newSuccessor *protos.Node) {
 	node.FingerTableMtx.Lock()
-	node.FingerTable[0] = newSuccessor
+	node.applySetNode("SUCCESSOR", newSuccessor)
 	node.FingerTableMtx.Unlock()
 }
 
@@ -314,7 +259,7 @@ func (node *Node) getPredecessor() *protos.Node {
 
 func (node *Node) setPredecessor(newPredecessor *protos.Node) {
 	node.PredecessorMtx.Lock()
-	node.Predecessor = newPredecessor
+	node.applySetNode("PREDECESSOR", newPredecessor)
 	node.PredecessorMtx.Unlock()
 }
 
@@ -358,10 +303,10 @@ func (node *Node) fixFingerTable(count int) int {
 	fingerStart := node.fingerStart(count)
 	successor, err := node.findSuccessor(fingerStart)
 	if err != nil {
-		return count
+		return 0
 	}
 
-	node.FingerTable[count] = successor
+	node.applySetFingerRow(successor, count)
 
 	return count
 }
@@ -377,9 +322,23 @@ func (node *Node) String() string {
 	}
 
 	if node.Predecessor != nil {
-		s += fmt.Sprintf("Predecessor: %d", node.Predecessor.Id)
+		s += fmt.Sprintf("Predecessor: %d\n", node.Predecessor.Id)
 	} else {
-		s += fmt.Sprintf("Predecessor: None")
+		s += fmt.Sprintf("Predecessor: None\n")
+	}
+
+	s += fmt.Sprintf("---------------\n")
+	s += fmt.Sprintf("Store: \n")
+	for key, value := range node.Storage {
+		s += fmt.Sprintf("KEY: %d - VALUE: %s\n", key, value)
+	}
+	s += fmt.Sprintf("---------------\n")
+	s += fmt.Sprintf("Raft: \n")
+	s += fmt.Sprintf("Address: %s - ID: %d\n", node.RaftAddress, node.RaftID)
+	s += fmt.Sprintf("Leader: %s\n", node.Leader)
+	s += fmt.Sprintf("Replicas: \n")
+	for index, replica := range node.Replicas {
+		s += fmt.Sprintf("%d: %s\n", index, replica.Address)
 	}
 
 	return s

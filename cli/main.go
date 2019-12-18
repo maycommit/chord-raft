@@ -2,11 +2,10 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
+	"os/signal"
 	"strconv"
 	"time"
 
@@ -16,6 +15,11 @@ import (
 	"github.com/urfave/cli"
 	"google.golang.org/grpc"
 )
+
+type NodeFileData struct {
+	*node.NodeData
+	Replicas []*node.NodeData
+}
 
 var app = cli.NewApp()
 
@@ -48,30 +52,108 @@ func info() {
 	app.Version = "1.0.0"
 }
 
+func transformFileDataToNodeData(nodeFileData *NodeFileData) *node.NodeData {
+	return &node.NodeData{
+		Id:            nodeFileData.Id,
+		Address:       nodeFileData.Address,
+		Parent:        nodeFileData.Parent,
+		RaftAddress:   nodeFileData.RaftAddress,
+		RaftDirectory: nodeFileData.RaftDirectory,
+	}
+}
+
+func handleLeaveNode(node *node.Node) {
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt)
+	go func() {
+		<-signalChan
+		fmt.Println("\nReceived an interrupt, stopping services...\n")
+		node.LeaveNode()
+		close(node.StopNode)
+		os.Exit(1)
+	}()
+}
+
 func commands() {
 	app.Commands = []cli.Command{
 		{
-			Name:    "readFile",
-			Aliases: []string{"r", "read"},
-			Usage:   "Read node file - {filePath(srtring)}",
+			Name:    "createChord",
+			Aliases: []string{"c", "create"},
+			Usage:   "Create chord - {nodeAddress(string) raftId(int) raftAddress(string) raftDirectory(string)}",
 			Action: func(c *cli.Context) {
-				nodeJSON, err := os.Open(c.Args().Get(0))
+				raftID, _ := strconv.Atoi(c.Args().Get(1))
+				nodeData := &node.NodeData{
+					Id:            0,
+					Address:       c.Args().Get(0),
+					RaftID:        raftID,
+					RaftAddress:   c.Args().Get(2),
+					RaftDirectory: c.Args().Get(3),
+					Parent:        "",
+				}
+				newNode, err := node.NewNode(nodeData, false)
 				if err != nil {
 					panic(err)
 				}
 
-				byteValue, _ := ioutil.ReadAll(nodeJSON)
-				var nodeData *node.NodeData
-				json.Unmarshal([]byte(byteValue), &nodeData)
+				handleLeaveNode(newNode)
 
-				node, err := node.NewNode(nodeData)
+				for {
+					time.Sleep(2000 * time.Millisecond)
+					fmt.Printf(newNode.String())
+				}
+			},
+		},
+		{
+			Name:    "joinNode",
+			Aliases: []string{"j", "join"},
+			Usage:   "Join node in chord - {nodeID(int) raftID(int) nodeAddress(string) parentNode(string) raftAddress(string) raftDirectory(string)}",
+			Action: func(c *cli.Context) {
+				id, _ := strconv.Atoi(c.Args().Get(0))
+				raftID, _ := strconv.Atoi(c.Args().Get(1))
+				nodeData := &node.NodeData{
+					Id:            id,
+					RaftID:        raftID,
+					Address:       c.Args().Get(2),
+					Parent:        c.Args().Get(3),
+					RaftAddress:   c.Args().Get(4),
+					RaftDirectory: c.Args().Get(5),
+				}
+				newNode, err := node.NewNode(nodeData, false)
+				if err != nil {
+					panic(err)
+				}
+
+				handleLeaveNode(newNode)
+
+				for {
+					time.Sleep(2000 * time.Millisecond)
+					fmt.Printf(newNode.String())
+				}
+			},
+		},
+		{
+			Name:    "addReplica",
+			Aliases: []string{"r", "replica"},
+			Usage:   "Create node replica - {nodeID(int) raftID(int) replicaAddress(string) nodeAddress(string) raftAddress(string) raftDirectory(string)}",
+			Action: func(c *cli.Context) {
+				id, _ := strconv.Atoi(c.Args().Get(0))
+				raftID, _ := strconv.Atoi(c.Args().Get(1))
+				nodeData := &node.NodeData{
+					Id:            id,
+					RaftID:        raftID,
+					Address:       c.Args().Get(2),
+					Parent:        c.Args().Get(3),
+					RaftAddress:   c.Args().Get(4),
+					RaftDirectory: c.Args().Get(5),
+				}
+				newNode, err := node.NewNode(nodeData, true)
 				if err != nil {
 					panic(err)
 				}
 
 				for {
 					time.Sleep(2000 * time.Millisecond)
-					fmt.Printf(node.String())
+					fmt.Printf(newNode.String())
 				}
 			},
 		},

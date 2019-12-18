@@ -5,6 +5,15 @@ import (
 	"sdproject/protos"
 )
 
+func (node *Node) JoinRPC(ctx context.Context, parentNode *protos.Node) (*protos.Any, error) {
+	err := node.createChordOrJoinNode(parentNode.Address)
+	if err != nil {
+		return nil, err
+	}
+
+	return &protos.Any{}, nil
+}
+
 func (node *Node) FindSuccessorRPC(ctx context.Context, id *protos.ID) (*protos.Node, error) {
 	successor, err := node.findSuccessor(id.Id)
 	if err != nil {
@@ -22,6 +31,16 @@ func (node *Node) GetSuccessorRPC(ctx context.Context, any *protos.Any) (*protos
 func (node *Node) GetPredecessorRPC(ctx context.Context, any *protos.Any) (*protos.Node, error) {
 	predecessor := node.getPredecessor()
 	return predecessor, nil
+}
+
+func (node *Node) SetPredecessorRPC(ctx context.Context, newPredecessor *protos.Node) (*protos.Any, error) {
+	node.setPredecessor(newPredecessor)
+	return &protos.Any{}, nil
+}
+
+func (node *Node) SetSuccessorRPC(ctx context.Context, newSuccessor *protos.Node) (*protos.Any, error) {
+	node.setSuccessor(newSuccessor)
+	return &protos.Any{}, nil
 }
 
 func (node *Node) NotifyRPC(ctx context.Context, x *protos.Node) (*protos.Any, error) {
@@ -42,4 +61,13 @@ func (node *Node) StorageSetRPC(ctx context.Context, data *protos.Data) (*protos
 func (node *Node) StorageDeleteRPC(ctx context.Context, data *protos.Key) (*protos.Any, error) {
 	node.StorageDelete(data.Key)
 	return &protos.Any{}, nil
+}
+
+func (node *Node) JoinRaftRPC(ctx context.Context, multipleNodes *protos.MultipleNodes) (*protos.Node, error) {
+	leader, err := node.joinRaft(multipleNodes.ChordNode, multipleNodes.RaftNode)
+	if err != nil {
+		return nil, err
+	}
+
+	return leader, nil
 }

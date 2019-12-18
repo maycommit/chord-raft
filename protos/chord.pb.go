@@ -110,6 +110,53 @@ func (m *Node) GetAddress() string {
 	return ""
 }
 
+type MultipleNodes struct {
+	ChordNode            *Node    `protobuf:"bytes,1,opt,name=chordNode,proto3" json:"chordNode,omitempty"`
+	RaftNode             *Node    `protobuf:"bytes,2,opt,name=raftNode,proto3" json:"raftNode,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *MultipleNodes) Reset()         { *m = MultipleNodes{} }
+func (m *MultipleNodes) String() string { return proto.CompactTextString(m) }
+func (*MultipleNodes) ProtoMessage()    {}
+func (*MultipleNodes) Descriptor() ([]byte, []int) {
+	return fileDescriptor_541dae51990542ec, []int{2}
+}
+
+func (m *MultipleNodes) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_MultipleNodes.Unmarshal(m, b)
+}
+func (m *MultipleNodes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_MultipleNodes.Marshal(b, m, deterministic)
+}
+func (m *MultipleNodes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MultipleNodes.Merge(m, src)
+}
+func (m *MultipleNodes) XXX_Size() int {
+	return xxx_messageInfo_MultipleNodes.Size(m)
+}
+func (m *MultipleNodes) XXX_DiscardUnknown() {
+	xxx_messageInfo_MultipleNodes.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MultipleNodes proto.InternalMessageInfo
+
+func (m *MultipleNodes) GetChordNode() *Node {
+	if m != nil {
+		return m.ChordNode
+	}
+	return nil
+}
+
+func (m *MultipleNodes) GetRaftNode() *Node {
+	if m != nil {
+		return m.RaftNode
+	}
+	return nil
+}
+
 type Key struct {
 	Key                  int64    `protobuf:"varint,1,opt,name=key,proto3" json:"key,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -121,7 +168,7 @@ func (m *Key) Reset()         { *m = Key{} }
 func (m *Key) String() string { return proto.CompactTextString(m) }
 func (*Key) ProtoMessage()    {}
 func (*Key) Descriptor() ([]byte, []int) {
-	return fileDescriptor_541dae51990542ec, []int{2}
+	return fileDescriptor_541dae51990542ec, []int{3}
 }
 
 func (m *Key) XXX_Unmarshal(b []byte) error {
@@ -160,7 +207,7 @@ func (m *Value) Reset()         { *m = Value{} }
 func (m *Value) String() string { return proto.CompactTextString(m) }
 func (*Value) ProtoMessage()    {}
 func (*Value) Descriptor() ([]byte, []int) {
-	return fileDescriptor_541dae51990542ec, []int{3}
+	return fileDescriptor_541dae51990542ec, []int{4}
 }
 
 func (m *Value) XXX_Unmarshal(b []byte) error {
@@ -200,7 +247,7 @@ func (m *Data) Reset()         { *m = Data{} }
 func (m *Data) String() string { return proto.CompactTextString(m) }
 func (*Data) ProtoMessage()    {}
 func (*Data) Descriptor() ([]byte, []int) {
-	return fileDescriptor_541dae51990542ec, []int{4}
+	return fileDescriptor_541dae51990542ec, []int{5}
 }
 
 func (m *Data) XXX_Unmarshal(b []byte) error {
@@ -246,7 +293,7 @@ func (m *Datas) Reset()         { *m = Datas{} }
 func (m *Datas) String() string { return proto.CompactTextString(m) }
 func (*Datas) ProtoMessage()    {}
 func (*Datas) Descriptor() ([]byte, []int) {
-	return fileDescriptor_541dae51990542ec, []int{5}
+	return fileDescriptor_541dae51990542ec, []int{6}
 }
 
 func (m *Datas) XXX_Unmarshal(b []byte) error {
@@ -284,7 +331,7 @@ func (m *Any) Reset()         { *m = Any{} }
 func (m *Any) String() string { return proto.CompactTextString(m) }
 func (*Any) ProtoMessage()    {}
 func (*Any) Descriptor() ([]byte, []int) {
-	return fileDescriptor_541dae51990542ec, []int{6}
+	return fileDescriptor_541dae51990542ec, []int{7}
 }
 
 func (m *Any) XXX_Unmarshal(b []byte) error {
@@ -308,6 +355,7 @@ var xxx_messageInfo_Any proto.InternalMessageInfo
 func init() {
 	proto.RegisterType((*ID)(nil), "protos.ID")
 	proto.RegisterType((*Node)(nil), "protos.Node")
+	proto.RegisterType((*MultipleNodes)(nil), "protos.MultipleNodes")
 	proto.RegisterType((*Key)(nil), "protos.Key")
 	proto.RegisterType((*Value)(nil), "protos.Value")
 	proto.RegisterType((*Data)(nil), "protos.Data")
@@ -318,29 +366,33 @@ func init() {
 func init() { proto.RegisterFile("chord.proto", fileDescriptor_541dae51990542ec) }
 
 var fileDescriptor_541dae51990542ec = []byte{
-	// 339 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x92, 0xe1, 0x4a, 0xc3, 0x30,
-	0x14, 0x85, 0x69, 0xbb, 0x2a, 0xbb, 0x73, 0x3a, 0xc3, 0xd0, 0x32, 0x10, 0x46, 0x7e, 0xc8, 0x70,
-	0xa3, 0xc8, 0x7c, 0x82, 0xb1, 0x62, 0x19, 0x83, 0x31, 0x3a, 0xf0, 0x7f, 0x6d, 0xae, 0xb3, 0x58,
-	0x1a, 0x69, 0x32, 0xa1, 0x2f, 0xe4, 0x73, 0x4a, 0x9a, 0x75, 0x2e, 0x2b, 0x88, 0xbf, 0x7a, 0x6f,
-	0xce, 0x77, 0x4e, 0x38, 0x6d, 0xa1, 0x93, 0xbc, 0xf3, 0x82, 0xf9, 0x9f, 0x05, 0x97, 0x9c, 0x9c,
-	0x55, 0x0f, 0x41, 0xfb, 0x60, 0x2f, 0x02, 0x72, 0x09, 0x76, 0xca, 0x3c, 0x6b, 0x68, 0x8d, 0x9c,
-	0xc8, 0x4e, 0x19, 0x7d, 0x84, 0xd6, 0x8a, 0x33, 0x3c, 0x3d, 0x27, 0x1e, 0x9c, 0xc7, 0x8c, 0x15,
-	0x28, 0x84, 0x67, 0x0f, 0xad, 0x51, 0x3b, 0xaa, 0x57, 0x7a, 0x0b, 0xce, 0x12, 0x4b, 0xd2, 0x03,
-	0xe7, 0x03, 0xcb, 0xbd, 0x43, 0x8d, 0xf4, 0x0e, 0xdc, 0x97, 0x38, 0xdb, 0x21, 0xe9, 0x83, 0xfb,
-	0xa5, 0x86, 0x4a, 0x6c, 0x47, 0x7a, 0xa1, 0x3e, 0xb4, 0x82, 0x58, 0xc6, 0x4d, 0xe3, 0x2f, 0x6f,
-	0x1f, 0xf3, 0x63, 0x70, 0x15, 0x2f, 0x08, 0x05, 0x97, 0xa9, 0xc1, 0xb3, 0x86, 0xce, 0xa8, 0x33,
-	0xbd, 0xd0, 0xbd, 0x84, 0xaf, 0xd4, 0x48, 0x4b, 0xd4, 0x05, 0x67, 0x96, 0x97, 0xd3, 0x6f, 0x07,
-	0xdc, 0xb9, 0xea, 0x4e, 0x26, 0xd0, 0x7b, 0x4e, 0x73, 0xb6, 0xd9, 0x25, 0x09, 0x0a, 0xc1, 0x8b,
-	0x68, 0x3d, 0x27, 0x50, 0x3b, 0x17, 0xc1, 0xe0, 0x90, 0x52, 0xb5, 0x9f, 0xc2, 0xcd, 0x3c, 0xe3,
-	0x02, 0xe5, 0xba, 0xc0, 0x04, 0x59, 0x9a, 0x6f, 0xd5, 0xf1, 0xdf, 0x9e, 0x09, 0x5c, 0x85, 0x28,
-	0x8d, 0x0b, 0x3a, 0x35, 0x30, 0xcb, 0xcb, 0x13, 0xda, 0x87, 0xeb, 0xb0, 0x8a, 0x67, 0xf8, 0x2f,
-	0xfe, 0x1e, 0xda, 0x2b, 0x2e, 0xd3, 0xb7, 0x52, 0x71, 0x86, 0x34, 0x38, 0x76, 0x91, 0x31, 0x74,
-	0x37, 0x92, 0x17, 0xf1, 0x16, 0x43, 0x94, 0x46, 0xe6, 0x12, 0xcb, 0x41, 0xb7, 0x5e, 0xf4, 0x87,
-	0x79, 0x38, 0xc0, 0x1b, 0x0d, 0x1b, 0xef, 0xd2, 0x0c, 0x9e, 0x40, 0x6f, 0xcf, 0x06, 0x98, 0xa1,
-	0xc4, 0x46, 0xb6, 0x41, 0xfb, 0x07, 0x3a, 0x44, 0x39, 0xcb, 0xb2, 0x46, 0xbb, 0xee, 0xf1, 0x4d,
-	0xe2, 0x55, 0xff, 0x94, 0x4f, 0x3f, 0x01, 0x00, 0x00, 0xff, 0xff, 0x66, 0xca, 0x77, 0x1a, 0xaa,
-	0x02, 0x00, 0x00,
+	// 415 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x93, 0xe1, 0x8a, 0x9c, 0x30,
+	0x10, 0xc7, 0x51, 0xd7, 0x5e, 0x1d, 0x6b, 0xef, 0x1a, 0xae, 0xad, 0x2c, 0x14, 0x96, 0x50, 0xca,
+	0x72, 0x77, 0x48, 0xb1, 0x4f, 0xb0, 0xac, 0x54, 0xae, 0x47, 0x8f, 0x43, 0xa1, 0xdf, 0xad, 0x99,
+	0xbd, 0x4a, 0xc5, 0x1c, 0x26, 0x5b, 0xf0, 0x65, 0xfb, 0x2c, 0x25, 0x71, 0xdd, 0x35, 0x6b, 0xd9,
+	0xf6, 0x93, 0x19, 0xff, 0xbf, 0xc9, 0xfc, 0x67, 0x92, 0x80, 0x5f, 0xfe, 0xe0, 0x2d, 0x8b, 0x9e,
+	0x5a, 0x2e, 0x39, 0x79, 0xa6, 0x3f, 0x82, 0x5e, 0x82, 0x7d, 0x9b, 0x90, 0x97, 0x60, 0x57, 0x2c,
+	0xb4, 0x16, 0xd6, 0xd2, 0xc9, 0xec, 0x8a, 0xd1, 0x8f, 0x30, 0xbb, 0xe7, 0x0c, 0x8f, 0xff, 0x93,
+	0x10, 0xce, 0x0a, 0xc6, 0x5a, 0x14, 0x22, 0xb4, 0x17, 0xd6, 0xd2, 0xcb, 0x86, 0x90, 0x22, 0x04,
+	0x5f, 0xb7, 0xb5, 0xac, 0x9e, 0x6a, 0x54, 0x99, 0x82, 0x5c, 0x81, 0xa7, 0xeb, 0xa9, 0x48, 0xef,
+	0xe0, 0xc7, 0x2f, 0xfa, 0xda, 0x22, 0x52, 0xff, 0xb2, 0x83, 0x4c, 0x96, 0xf0, 0xbc, 0x2d, 0x36,
+	0x52, 0xa3, 0xf6, 0x5f, 0xd0, 0xbd, 0x4a, 0xdf, 0x82, 0x73, 0x87, 0x1d, 0xb9, 0x00, 0xe7, 0x27,
+	0x76, 0x3b, 0x63, 0x6a, 0x49, 0xdf, 0x81, 0xfb, 0xad, 0xa8, 0xb7, 0x48, 0x2e, 0xc1, 0xfd, 0xa5,
+	0x16, 0x5a, 0xf4, 0xb2, 0x3e, 0xa0, 0x11, 0xcc, 0x92, 0x42, 0x16, 0xd3, 0xc4, 0x03, 0x6f, 0x8f,
+	0xf9, 0x6b, 0x70, 0x15, 0x2f, 0x08, 0x05, 0x97, 0xa9, 0x45, 0x68, 0x2d, 0x9c, 0xb1, 0x2f, 0xa5,
+	0x66, 0xbd, 0x44, 0x5d, 0x70, 0x56, 0x4d, 0x17, 0xff, 0x9e, 0x81, 0xbb, 0x56, 0x3d, 0x91, 0xf7,
+	0x70, 0xf6, 0x85, 0x57, 0x4d, 0xf6, 0xb0, 0x26, 0x46, 0x23, 0x73, 0x7f, 0x88, 0x56, 0x4d, 0x47,
+	0x6e, 0xe0, 0xe2, 0x73, 0xd5, 0xb0, 0x7c, 0x5b, 0x96, 0x28, 0x04, 0x6f, 0x15, 0x0e, 0x03, 0x70,
+	0x9b, 0xcc, 0x8d, 0x54, 0x12, 0xc3, 0x9b, 0x75, 0xcd, 0x05, 0xca, 0x87, 0x16, 0x4b, 0x64, 0x55,
+	0xf3, 0xa8, 0x47, 0x73, 0x32, 0xe7, 0x06, 0xce, 0x53, 0x94, 0x46, 0x81, 0xb1, 0x83, 0x23, 0x3a,
+	0x82, 0x57, 0xa9, 0xde, 0x9e, 0xe1, 0xff, 0xf2, 0xf9, 0x84, 0x3f, 0xd9, 0xef, 0x79, 0x7e, 0xe4,
+	0xe6, 0x04, 0xfd, 0x01, 0xbc, 0x7b, 0x2e, 0xab, 0x4d, 0xf7, 0x0f, 0xee, 0x1a, 0x82, 0x5c, 0xf2,
+	0xb6, 0x78, 0xc4, 0x14, 0xa5, 0xe1, 0xf8, 0x0e, 0xbb, 0x79, 0x30, 0x04, 0xfd, 0xe5, 0xb8, 0xda,
+	0xc3, 0x79, 0x0f, 0x1b, 0xe7, 0x39, 0x39, 0x9e, 0x1d, 0x9b, 0x60, 0x8d, 0x12, 0x27, 0x7b, 0x1b,
+	0x74, 0xb4, 0xa7, 0x53, 0x94, 0xab, 0xba, 0x9e, 0xcc, 0x2e, 0x18, 0x57, 0x12, 0x24, 0x06, 0x5f,
+	0x5f, 0x91, 0x62, 0xa3, 0x7d, 0xbc, 0x1e, 0x54, 0xe3, 0x11, 0x99, 0x03, 0xff, 0xde, 0xbf, 0xd9,
+	0x4f, 0x7f, 0x02, 0x00, 0x00, 0xff, 0xff, 0xb8, 0xc8, 0xb2, 0x47, 0xc9, 0x03, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -355,15 +407,19 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type ChordClient interface {
+	JoinRPC(ctx context.Context, in *Node, opts ...grpc.CallOption) (*Any, error)
 	FindSuccessorRPC(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Node, error)
 	ClosetPrecedingNodeRPC(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Node, error)
 	GetSuccessorRPC(ctx context.Context, in *Any, opts ...grpc.CallOption) (*Node, error)
 	GetPredecessorRPC(ctx context.Context, in *Any, opts ...grpc.CallOption) (*Node, error)
+	SetPredecessorRPC(ctx context.Context, in *Node, opts ...grpc.CallOption) (*Any, error)
+	SetSuccessorRPC(ctx context.Context, in *Node, opts ...grpc.CallOption) (*Any, error)
 	NotifyRPC(ctx context.Context, in *Node, opts ...grpc.CallOption) (*Any, error)
 	StorageGetRPC(ctx context.Context, in *Key, opts ...grpc.CallOption) (*Value, error)
 	StorageSetRPC(ctx context.Context, in *Data, opts ...grpc.CallOption) (*Any, error)
 	StorageDeleteRPC(ctx context.Context, in *Key, opts ...grpc.CallOption) (*Any, error)
 	StorageGetAllRPC(ctx context.Context, in *Any, opts ...grpc.CallOption) (*Datas, error)
+	JoinRaftRPC(ctx context.Context, in *MultipleNodes, opts ...grpc.CallOption) (*Node, error)
 }
 
 type chordClient struct {
@@ -372,6 +428,15 @@ type chordClient struct {
 
 func NewChordClient(cc *grpc.ClientConn) ChordClient {
 	return &chordClient{cc}
+}
+
+func (c *chordClient) JoinRPC(ctx context.Context, in *Node, opts ...grpc.CallOption) (*Any, error) {
+	out := new(Any)
+	err := c.cc.Invoke(ctx, "/protos.Chord/JoinRPC", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *chordClient) FindSuccessorRPC(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Node, error) {
@@ -404,6 +469,24 @@ func (c *chordClient) GetSuccessorRPC(ctx context.Context, in *Any, opts ...grpc
 func (c *chordClient) GetPredecessorRPC(ctx context.Context, in *Any, opts ...grpc.CallOption) (*Node, error) {
 	out := new(Node)
 	err := c.cc.Invoke(ctx, "/protos.Chord/GetPredecessorRPC", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chordClient) SetPredecessorRPC(ctx context.Context, in *Node, opts ...grpc.CallOption) (*Any, error) {
+	out := new(Any)
+	err := c.cc.Invoke(ctx, "/protos.Chord/SetPredecessorRPC", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chordClient) SetSuccessorRPC(ctx context.Context, in *Node, opts ...grpc.CallOption) (*Any, error) {
+	out := new(Any)
+	err := c.cc.Invoke(ctx, "/protos.Chord/SetSuccessorRPC", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -455,23 +538,39 @@ func (c *chordClient) StorageGetAllRPC(ctx context.Context, in *Any, opts ...grp
 	return out, nil
 }
 
+func (c *chordClient) JoinRaftRPC(ctx context.Context, in *MultipleNodes, opts ...grpc.CallOption) (*Node, error) {
+	out := new(Node)
+	err := c.cc.Invoke(ctx, "/protos.Chord/JoinRaftRPC", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChordServer is the server API for Chord service.
 type ChordServer interface {
+	JoinRPC(context.Context, *Node) (*Any, error)
 	FindSuccessorRPC(context.Context, *ID) (*Node, error)
 	ClosetPrecedingNodeRPC(context.Context, *ID) (*Node, error)
 	GetSuccessorRPC(context.Context, *Any) (*Node, error)
 	GetPredecessorRPC(context.Context, *Any) (*Node, error)
+	SetPredecessorRPC(context.Context, *Node) (*Any, error)
+	SetSuccessorRPC(context.Context, *Node) (*Any, error)
 	NotifyRPC(context.Context, *Node) (*Any, error)
 	StorageGetRPC(context.Context, *Key) (*Value, error)
 	StorageSetRPC(context.Context, *Data) (*Any, error)
 	StorageDeleteRPC(context.Context, *Key) (*Any, error)
 	StorageGetAllRPC(context.Context, *Any) (*Datas, error)
+	JoinRaftRPC(context.Context, *MultipleNodes) (*Node, error)
 }
 
 // UnimplementedChordServer can be embedded to have forward compatible implementations.
 type UnimplementedChordServer struct {
 }
 
+func (*UnimplementedChordServer) JoinRPC(ctx context.Context, req *Node) (*Any, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method JoinRPC not implemented")
+}
 func (*UnimplementedChordServer) FindSuccessorRPC(ctx context.Context, req *ID) (*Node, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FindSuccessorRPC not implemented")
 }
@@ -483,6 +582,12 @@ func (*UnimplementedChordServer) GetSuccessorRPC(ctx context.Context, req *Any) 
 }
 func (*UnimplementedChordServer) GetPredecessorRPC(ctx context.Context, req *Any) (*Node, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPredecessorRPC not implemented")
+}
+func (*UnimplementedChordServer) SetPredecessorRPC(ctx context.Context, req *Node) (*Any, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetPredecessorRPC not implemented")
+}
+func (*UnimplementedChordServer) SetSuccessorRPC(ctx context.Context, req *Node) (*Any, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetSuccessorRPC not implemented")
 }
 func (*UnimplementedChordServer) NotifyRPC(ctx context.Context, req *Node) (*Any, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NotifyRPC not implemented")
@@ -499,9 +604,30 @@ func (*UnimplementedChordServer) StorageDeleteRPC(ctx context.Context, req *Key)
 func (*UnimplementedChordServer) StorageGetAllRPC(ctx context.Context, req *Any) (*Datas, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StorageGetAllRPC not implemented")
 }
+func (*UnimplementedChordServer) JoinRaftRPC(ctx context.Context, req *MultipleNodes) (*Node, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method JoinRaftRPC not implemented")
+}
 
 func RegisterChordServer(s *grpc.Server, srv ChordServer) {
 	s.RegisterService(&_Chord_serviceDesc, srv)
+}
+
+func _Chord_JoinRPC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Node)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChordServer).JoinRPC(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/protos.Chord/JoinRPC",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChordServer).JoinRPC(ctx, req.(*Node))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Chord_FindSuccessorRPC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -572,6 +698,42 @@ func _Chord_GetPredecessorRPC_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChordServer).GetPredecessorRPC(ctx, req.(*Any))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Chord_SetPredecessorRPC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Node)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChordServer).SetPredecessorRPC(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/protos.Chord/SetPredecessorRPC",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChordServer).SetPredecessorRPC(ctx, req.(*Node))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Chord_SetSuccessorRPC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Node)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChordServer).SetSuccessorRPC(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/protos.Chord/SetSuccessorRPC",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChordServer).SetSuccessorRPC(ctx, req.(*Node))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -666,10 +828,32 @@ func _Chord_StorageGetAllRPC_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Chord_JoinRaftRPC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MultipleNodes)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChordServer).JoinRaftRPC(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/protos.Chord/JoinRaftRPC",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChordServer).JoinRaftRPC(ctx, req.(*MultipleNodes))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Chord_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "protos.Chord",
 	HandlerType: (*ChordServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "JoinRPC",
+			Handler:    _Chord_JoinRPC_Handler,
+		},
 		{
 			MethodName: "FindSuccessorRPC",
 			Handler:    _Chord_FindSuccessorRPC_Handler,
@@ -685,6 +869,14 @@ var _Chord_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPredecessorRPC",
 			Handler:    _Chord_GetPredecessorRPC_Handler,
+		},
+		{
+			MethodName: "SetPredecessorRPC",
+			Handler:    _Chord_SetPredecessorRPC_Handler,
+		},
+		{
+			MethodName: "SetSuccessorRPC",
+			Handler:    _Chord_SetSuccessorRPC_Handler,
 		},
 		{
 			MethodName: "NotifyRPC",
@@ -705,6 +897,10 @@ var _Chord_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "StorageGetAllRPC",
 			Handler:    _Chord_StorageGetAllRPC_Handler,
+		},
+		{
+			MethodName: "JoinRaftRPC",
+			Handler:    _Chord_JoinRaftRPC_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

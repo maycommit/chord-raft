@@ -24,6 +24,7 @@ func NewConfig() {
 		"PERSISTENCE":               "false",
 		"MIN_REPLICAS":              "3",
 		"SNAPSHOT_COUNT":            "2",
+		"GRPC_GO_REQUIRE_HANDSHAKE": "off",
 		"RAFT_TIMEOUT":              string(10 * time.Second),
 	}
 

@@ -15,12 +15,15 @@ type GrpcConn struct {
 }
 
 func (node *Node) NewGrpcConn(remoteConn *protos.Node) (protos.ChordClient, error) {
+	node.PoolMtx.Lock()
 	grpcConn, ok := node.Pool[remoteConn.Address]
 	if ok {
+		node.PoolMtx.Unlock()
 		return grpcConn.client, nil
 	}
+	node.PoolMtx.Unlock()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	dialOptions := []grpc.DialOption{
@@ -38,7 +41,10 @@ func (node *Node) NewGrpcConn(remoteConn *protos.Node) (protos.ChordClient, erro
 	client := protos.NewChordClient(conn)
 
 	grpcConn = &GrpcConn{remoteConn.Address, client, conn}
+
+	node.PoolMtx.Lock()
 	node.Pool[remoteConn.Address] = grpcConn
+	node.PoolMtx.Unlock()
 
 	return client, nil
 }

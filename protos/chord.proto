@@ -3,15 +3,19 @@ syntax = "proto3";
 package protos;
 
 service Chord {
+  rpc JoinRPC(Node) returns (Any);
   rpc FindSuccessorRPC(ID) returns (Node);
   rpc ClosetPrecedingNodeRPC(ID) returns (Node);
   rpc GetSuccessorRPC(Any) returns (Node);
   rpc GetPredecessorRPC(Any) returns (Node);
+  rpc SetPredecessorRPC(Node) returns (Any);
+  rpc SetSuccessorRPC(Node) returns (Any);
   rpc NotifyRPC(Node) returns (Any);
   rpc StorageGetRPC(Key) returns (Value);
   rpc StorageSetRPC(Data) returns (Any);
   rpc StorageDeleteRPC(Key) returns (Any);
   rpc StorageGetAllRPC(Any) returns (Datas);
+  rpc JoinRaftRPC(MultipleNodes) returns (Node);
 }
 
 message ID {
@@ -21,6 +25,11 @@ message ID {
 message Node {
   int64 id = 1;
   string address = 2;
+}
+
+message MultipleNodes {
+  Node chordNode = 1;
+  Node raftNode = 2;
 }
 
 message Key {
