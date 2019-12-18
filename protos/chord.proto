@@ -4,6 +4,7 @@ package protos;
 
 service Chord {
   rpc JoinRPC(Node) returns (Any);
+  rpc LeaveRPC(Node) returns (Any);
   rpc FindSuccessorRPC(ID) returns (Node);
   rpc ClosetPrecedingNodeRPC(ID) returns (Node);
   rpc GetSuccessorRPC(Any) returns (Node);
@@ -13,6 +14,8 @@ service Chord {
   rpc NotifyRPC(Node) returns (Any);
   rpc StorageGetRPC(Key) returns (Value);
   rpc StorageSetRPC(Data) returns (Any);
+  rpc StorageImediateSetRPC(Data) returns (Any);
+  rpc StorageImediateDeleteRPC(Key) returns (Any);
   rpc StorageDeleteRPC(Key) returns (Any);
   rpc StorageGetAllRPC(Any) returns (Datas);
   rpc JoinRaftRPC(MultipleNodes) returns (Node);

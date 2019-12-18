@@ -125,8 +125,43 @@ func (node *Node) LeaveNode() {
 
 	node.GRPCServer.Stop()
 
+	successor := node.getSuccessor()
+	predecessor := node.getPredecessor()
+
 	if len(node.Replicas) > 0 {
 		replicaSuccessor := node.Replicas[0]
+
+		if node.Id == node.getPredecessor().Id {
+			_, err := node.SetPredecessorGRPC(replicaSuccessor, replicaSuccessor)
+			if err != nil {
+				NewTracer("error", "LeaveNode::SetPredecessorGRPC", err.Error())
+				return
+			}
+			NewTracer("info", "LeaveNode::SetPredecessorGRPC", "Change replica predecessor")
+		} else {
+			_, err := node.SetPredecessorGRPC(successor, replicaSuccessor)
+			if err != nil {
+				NewTracer("info", "LeaveNode::SetPredecessorGRPC", err.Error())
+				return
+			}
+			NewTracer("info", "LeaveNode::SetPredecessorGRPC", "Change predecessor of successor")
+		}
+
+		if node.Id == node.getSuccessor().Id {
+			_, err := node.SetSuccessorGRPC(replicaSuccessor, replicaSuccessor)
+			if err != nil {
+				NewTracer("error", "LeaveNode::SetSuccessorGRPC", err.Error())
+				return
+			}
+			NewTracer("info", "LeaveNode::SetSuccessorGRPC", "Change replica successor")
+		} else {
+			_, err := node.SetSuccessorGRPC(predecessor, replicaSuccessor)
+			if err != nil {
+				NewTracer("info", "LeaveNode::SetSuccessorGRPC", err.Error())
+				return
+			}
+			NewTracer("info", "LeaveNode::SetSuccessorGRPC", "Change successor of predecessor")
+		}
 
 		_, err := node.JoinGRPC(replicaSuccessor, &protos.Node{Address: node.Parent})
 		if err != nil {
@@ -136,24 +171,26 @@ func (node *Node) LeaveNode() {
 
 		NewTracer("info", "LeaveNode::JoinGRPC", "Add replica to chord!")
 
+		// node.LeaveGRPC(&protos.Node{Address: replicaSuccessor.Address}, &protos.Node{Address: node.Address})
+
 		for _, conn := range node.Pool {
 			conn.conn.Close()
 		}
 		return
 	}
 
-	if node.getSuccessor().Id != node.Id && node.getPredecessor() != nil {
-		_, err := node.SetPredecessorGRPC(node.getSuccessor(), node.getPredecessor())
-		if err != nil {
-			NewTracer("info", "LeaveNode::SetPredecessorGRPC", err.Error())
-			return
-		}
-		_, err = node.SetSuccessorGRPC(node.getPredecessor(), node.getSuccessor())
-		if err != nil {
-			NewTracer("info", "LeaveNode::SetSuccessorGRPC", err.Error())
-			return
-		}
-	}
+	// if node.getSuccessor().Id != node.Id && node.getPredecessor() != nil {
+	// _, err := node.SetPredecessorGRPC(node.getSuccessor(), node.getPredecessor())
+	// if err != nil {
+	// 	NewTracer("info", "LeaveNode::SetPredecessorGRPC", err.Error())
+	// 	return
+	// }
+	// _, err = node.SetSuccessorGRPC(node.getPredecessor(), node.getSuccessor())
+	// if err != nil {
+	// 	NewTracer("info", "LeaveNode::SetSuccessorGRPC", err.Error())
+	// 	return
+	// }
+	// }
 
 	return
 }
@@ -168,20 +205,17 @@ func (node *Node) createChordOrJoinNode(parentNode string) error {
 }
 
 func (node *Node) create() {
-	node.Predecessor = nil
 	node.setSuccessor(node.Node)
 
 }
 
 func (node *Node) join(parentNode string) error {
-	node.Predecessor = nil
 	successor, err := node.FindSuccessorGRPC(&protos.Node{Address: parentNode}, node.Id)
 	if err != nil {
 		return err
 	}
 
 	node.setSuccessor(successor)
-
 	node.StartAsyncProcess()
 
 	return nil
@@ -270,7 +304,10 @@ func (node *Node) stabilize() {
 		return
 	}
 
-	x, _ := node.GetPredecessorGRPC(successor)
+	x, err := node.GetPredecessorGRPC(successor)
+	if err != nil {
+		return
+	}
 
 	if x == nil {
 		return
@@ -285,6 +322,7 @@ func (node *Node) stabilize() {
 
 func (node *Node) notify(x *protos.Node) {
 	if node.Predecessor == nil || BetweenID(x.Id, node.Predecessor.Id, node.Id) {
+		NewTracer("info", "notify::setPredecessor", "Novo predecessor!")
 		node.setPredecessor(x)
 	}
 }
@@ -312,17 +350,18 @@ func (node *Node) fixFingerTable(count int) int {
 }
 
 func (node *Node) String() string {
+
 	s := fmt.Sprintf("Address: %s - ID: %d\n", node.Address, node.Id)
 
 	s += "id | start | successor\n"
 	for i := 0; i < len(node.FingerTable); i++ {
 		if node.FingerTable[i] != nil {
-			s += fmt.Sprintf("%d  | %d     | %d\n", i, node.fingerStart(i), node.FingerTable[i].Id)
+			s += fmt.Sprintf("%d  | %d     | %d - %s\n", i, node.fingerStart(i), node.FingerTable[i].Id, node.FingerTable[i].Address)
 		}
 	}
 
 	if node.Predecessor != nil {
-		s += fmt.Sprintf("Predecessor: %d\n", node.Predecessor.Id)
+		s += fmt.Sprintf("Predecessor: %d - Address: %s\n", node.Predecessor.Id, node.Predecessor.Address)
 	} else {
 		s += fmt.Sprintf("Predecessor: None\n")
 	}
@@ -337,9 +376,11 @@ func (node *Node) String() string {
 	s += fmt.Sprintf("Address: %s - ID: %d\n", node.RaftAddress, node.RaftID)
 	s += fmt.Sprintf("Leader: %s\n", node.Leader)
 	s += fmt.Sprintf("Replicas: \n")
-	for index, replica := range node.Replicas {
-		s += fmt.Sprintf("%d: %s\n", index, replica.Address)
+	for _, replica := range node.Replicas {
+		s += fmt.Sprintf("%d: %s\n", replica.Id, replica.Address)
 	}
+
+	s += fmt.Sprintf("\n\n")
 
 	return s
 }
@@ -373,6 +414,16 @@ func (node *Node) StorageSet(key int64, value string) error {
 	}
 
 	if closestNode.Address == node.Address {
+		if node.Raft.State() != raft.Leader {
+			err = node.StorageImediateSetGRPC(node.Leader, key, value)
+			if err != nil {
+				return err
+			}
+
+			NewTracer("info", "storeSet", fmt.Sprintf("Dado inserido no node %s", closestNode.Address))
+			return nil
+		}
+
 		node.applySet(key, value)
 		NewTracer("info", "storeSet", fmt.Sprintf("Dado inserido no node %s", closestNode.Address))
 		return nil
@@ -396,6 +447,16 @@ func (node *Node) StorageDelete(key int64) error {
 	}
 
 	if closestNode.Address == node.Address {
+		if node.Raft.State() != raft.Leader {
+			err = node.StorageDeleteGRPC(node.Leader, key)
+			if err != nil {
+				return err
+			}
+
+			NewTracer("info", "storeSet", fmt.Sprintf("Dado inserido no node %s", closestNode.Address))
+			return nil
+		}
+
 		node.applyDelete(key)
 		NewTracer("info", "StorageDelete", fmt.Sprintf("Dado removido no node %s", closestNode.Address))
 		return nil

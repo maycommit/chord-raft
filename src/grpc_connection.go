@@ -35,7 +35,7 @@ func (node *Node) NewGrpcConn(remoteConn *protos.Node) (protos.ChordClient, erro
 
 	conn, err := grpc.DialContext(ctx, remoteConn.Address, dialOptions...)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	client := protos.NewChordClient(conn)

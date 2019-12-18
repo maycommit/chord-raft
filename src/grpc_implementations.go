@@ -14,6 +14,13 @@ func (node *Node) JoinRPC(ctx context.Context, parentNode *protos.Node) (*protos
 	return &protos.Any{}, nil
 }
 
+func (node *Node) LeaveRPC(ctx context.Context, leaveNode *protos.Node) (*protos.Any, error) {
+	node.Pool[leaveNode.Address].conn.Close()
+	delete(node.Pool, leaveNode.Address)
+
+	return &protos.Any{}, nil
+}
+
 func (node *Node) FindSuccessorRPC(ctx context.Context, id *protos.ID) (*protos.Node, error) {
 	successor, err := node.findSuccessor(id.Id)
 	if err != nil {
@@ -51,6 +58,16 @@ func (node *Node) NotifyRPC(ctx context.Context, x *protos.Node) (*protos.Any, e
 func (node *Node) StorageGetRPC(ctx context.Context, key *protos.Key) (*protos.Value, error) {
 	value, err := node.StorageGet(key.Key)
 	return &protos.Value{Value: value}, err
+}
+
+func (node *Node) StorageImediateSetRPC(ctx context.Context, data *protos.Data) (*protos.Any, error) {
+	node.applySet(data.Key, data.Value)
+	return &protos.Any{}, nil
+}
+
+func (node *Node) StorageImediateDeleteRPC(ctx context.Context, data *protos.Key) (*protos.Any, error) {
+	node.applyDelete(data.Key)
+	return &protos.Any{}, nil
 }
 
 func (node *Node) StorageSetRPC(ctx context.Context, data *protos.Data) (*protos.Any, error) {

@@ -19,6 +19,20 @@ func (node *Node) JoinGRPC(remoteConn *protos.Node, parentNode *protos.Node) (*p
 	return result, nil
 }
 
+func (node *Node) LeaveGRPC(remoteConn *protos.Node, leaveNode *protos.Node) (*protos.Any, error) {
+	conn, err := node.NewGrpcConn(remoteConn)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := conn.LeaveRPC(context.Background(), leaveNode)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func (node *Node) FindSuccessorGRPC(remoteConn *protos.Node, id int64) (*protos.Node, error) {
 	conn, err := node.NewGrpcConn(remoteConn)
 	if err != nil {
@@ -84,7 +98,7 @@ func (node *Node) SetSuccessorGRPC(remoteConn *protos.Node, newSuccessor *protos
 		return nil, err
 	}
 
-	_, err = conn.SetPredecessorRPC(context.Background(), newSuccessor)
+	_, err = conn.SetSuccessorRPC(context.Background(), newSuccessor)
 	if err != nil {
 		NewTracer("error", "SetSuccessorRPC", err.Error())
 		return nil, err
@@ -149,6 +163,38 @@ func (node *Node) StorageDeleteGRPC(remoteConn *protos.Node, key int64) error {
 	}
 
 	_, err = conn.StorageDeleteRPC(context.Background(), &protos.Key{Key: key})
+	if err != nil {
+		NewTracer("error", "StorageDeleteGRPC", err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func (node *Node) StorageImediateSetGRPC(remoteConn *protos.Node, key int64, value string) error {
+	conn, err := node.NewGrpcConn(remoteConn)
+	if err != nil {
+		NewTracer("error", "StorageImediateSetGRPC", err.Error())
+		return err
+	}
+
+	_, err = conn.StorageImediateSetRPC(context.Background(), &protos.Data{Key: key, Value: value})
+	if err != nil {
+		NewTracer("error", "StorageImediateSetGRPC", err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func (node *Node) StorageImediateDeleteGRPC(remoteConn *protos.Node, key int64) error {
+	conn, err := node.NewGrpcConn(remoteConn)
+	if err != nil {
+		NewTracer("error", "StorageDeleteGRPC", err.Error())
+		return err
+	}
+
+	_, err = conn.StorageImediateDeleteRPC(context.Background(), &protos.Key{Key: key})
 	if err != nil {
 		NewTracer("error", "StorageDeleteGRPC", err.Error())
 		return err
